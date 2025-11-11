@@ -1,8 +1,23 @@
-# Welcome to your Expo app 👋
+# Tourist Safety Companion
 
-This is an [Expo](https://expo.dev) project created with [`create-expo-app`](https://www.npmjs.com/package/create-expo-app).
+An Expo / React Native experience that helps travellers stay situationally aware with quick emergency actions, live incident overlays, trusted contacts, and offline-ready checklists. Everything is built with Expo Router so navigation remains simple.
 
-## Get started
+## Features
+
+- **Permission gate** that ensures location + notification access before entering the dashboard.
+- **Live safety dashboard** with map overlays for nearby alerts, safe zones (embassy, hospital, police), and user position.
+- **Quick emergency actions** to dial 112, broadcast the current map link, or navigate to the nearest safe spot.
+- **Data-driven cards** showing risk metrics, prep checklists, trusted contacts, and verified local hotlines backed by `src/lib/safety-data.ts`.
+- **Reusable UI helpers** (cards, sections, chips) that keep the design cohesive and easy to extend.
+
+## Project structure
+
+- `app/` – Expo Router screens (`index.tsx` permission gate, `home.tsx` dashboard).
+- `components/` – Shared UI (pressable tabs, themed wrappers) you can extend.
+- `src/lib/safety-data.ts` – Mock data powering alerts, safe spots, metrics, checklists, and resources. Replace these with a backend/API when ready.
+- `hooks/` & `constants/` – Theme helpers from the Expo starter template.
+
+## Development
 
 1. Install dependencies
 
@@ -10,41 +25,28 @@ This is an [Expo](https://expo.dev) project created with [`create-expo-app`](htt
    npm install
    ```
 
-2. Start the app
+2. Run the Expo dev server
 
    ```bash
    npx expo start
    ```
 
-In the output, you'll find options to open the app in a
+3. Open the project in Expo Go, iOS simulator, Android emulator, or a development build as needed.
 
-- [development build](https://docs.expo.dev/develop/development-builds/introduction/)
-- [Android emulator](https://docs.expo.dev/workflow/android-studio-emulator/)
-- [iOS simulator](https://docs.expo.dev/workflow/ios-simulator/)
-- [Expo Go](https://expo.dev/go), a limited sandbox for trying out app development with Expo
+### Customising data quickly
 
-You can start developing by editing the files inside the **app** directory. This project uses [file-based routing](https://docs.expo.dev/router/introduction).
+All of the dashboard content lives in `src/lib/safety-data.ts`. Update or replace the mock arrays there to:
 
-## Get a fresh project
+- Insert live alerts from your backend.
+- Swap emergency phone numbers per market.
+- Seed the preparedness checklist with trip-specific actions.
 
-When you're ready, run:
+## Resetting the template
+
+Need the blank Expo starter again? Run:
 
 ```bash
 npm run reset-project
 ```
 
-This command will move the starter code to the **app-example** directory and create a blank **app** directory where you can start developing.
-
-## Learn more
-
-To learn more about developing your project with Expo, look at the following resources:
-
-- [Expo documentation](https://docs.expo.dev/): Learn fundamentals, or go into advanced topics with our [guides](https://docs.expo.dev/guides).
-- [Learn Expo tutorial](https://docs.expo.dev/tutorial/introduction/): Follow a step-by-step tutorial where you'll create a project that runs on Android, iOS, and the web.
-
-## Join the community
-
-Join our community of developers creating universal apps.
-
-- [Expo on GitHub](https://github.com/expo/expo): View our open source platform and contribute.
-- [Discord community](https://chat.expo.dev): Chat with Expo users and ask questions.
+This moves the current code into `app-example` and recreates a clean `app` folder.
