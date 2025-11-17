@@ -2,7 +2,6 @@ import React from 'react';
 import { View, StyleSheet, Text } from 'react-native';
 import MapView, { Marker, Callout, Circle, PROVIDER_DEFAULT } from 'react-native-maps';
 import { Theme } from '../../constants/theme';
-import { Ionicons } from '@expo/vector-icons';
 
 const RiskZoneMapScreen = () => {
   const initialRegion = {

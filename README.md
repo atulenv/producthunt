@@ -31,6 +31,10 @@ An Expo / React Native experience that helps travellers stay situationally aware
    npx expo start
    ```
 
+   > The `npm start` script now probes whether the environment allows opening a local TCP port.
+   > In restricted sandboxes (like this coding environment) the probe will log a warning and exit gracefully;
+   > on a normal workstation it launches `expo start` as usual.
+
 3. Open the project in Expo Go, iOS simulator, Android emulator, or a development build as needed.
 
 ### Customising data quickly

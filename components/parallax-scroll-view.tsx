@@ -1,5 +1,6 @@
+// UI Revamp - Updated ParallaxScrollView component to use direct theme styling.
 import type { PropsWithChildren, ReactElement } from 'react';
-import { StyleSheet } from 'react-native';
+import { StyleSheet, View } from 'react-native'; // UI Revamp - Use standard View
 import Animated, {
   interpolate,
   useAnimatedRef,
@@ -7,9 +8,8 @@ import Animated, {
   useScrollOffset,
 } from 'react-native-reanimated';
 
-import { ThemedView } from '@/components/themed-view';
+import { Theme } from '@/constants/theme'; // UI Revamp - Directly import Theme
 import { useColorScheme } from '@/hooks/use-color-scheme';
-import { useThemeColor } from '@/hooks/use-theme-color';
 
 const HEADER_HEIGHT = 250;
 
@@ -23,7 +23,7 @@ export default function ParallaxScrollView({
   headerImage,
   headerBackgroundColor,
 }: Props) {
-  const backgroundColor = useThemeColor({}, 'background');
+  const backgroundColor = Theme.colors.background; // UI Revamp - Directly use theme background color
   const colorScheme = useColorScheme() ?? 'light';
   const scrollRef = useAnimatedRef<Animated.ScrollView>();
   const scrollOffset = useScrollOffset(scrollRef);
@@ -57,7 +57,7 @@ export default function ParallaxScrollView({
         ]}>
         {headerImage}
       </Animated.View>
-      <ThemedView style={styles.content}>{children}</ThemedView>
+      <View style={styles.content}>{children}</View> {/* UI Revamp - Replaced ThemedView with View */}
     </Animated.ScrollView>
   );
 }
@@ -75,5 +75,6 @@ const styles = StyleSheet.create({
     padding: 32,
     gap: 16,
     overflow: 'hidden',
+    backgroundColor: Theme.colors.background, // UI Revamp - Apply background color directly
   },
 });

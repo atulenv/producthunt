@@ -1,194 +1,325 @@
+// Premium dashboard home with live metrics, alerts, and concierge actions.
 import { Ionicons } from '@expo/vector-icons';
+import { LinearGradient } from 'expo-linear-gradient';
+import * as Linking from 'expo-linking';
 import { useRouter } from 'expo-router';
-import React from 'react';
-import { ScrollView, StyleSheet, Text, View } from 'react-native';
-import MapView, { Circle, Marker, PROVIDER_DEFAULT } from 'react-native-maps';
-import SOSButton from '../../components/ui/SOSButton';
-import SafetyCard from '../../components/ui/SafetyCard';
+import React, { useEffect, useMemo, useState } from 'react';
+import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import Screen from '../../components/ui/Screen';
+import Card from '../../components/ui/Card';
+import SectionHeader from '../../components/ui/SectionHeader';
+import MetricCard from '../../components/ui/MetricCard';
+import AlertCard from '../../components/ui/AlertCard';
+import MapPreview from '../../components/ui/MapPreview';
+import AppButton from '../../components/ui/AppButton';
 import { Theme } from '../../constants/theme';
+import {
+  PREPAREDNESS,
+  RESOURCE_LINKS,
+  SAFETY_ALERTS,
+  SAFETY_METRICS,
+  SAFE_SPOTS,
+  TRUSTED_CONTACTS as STATIC_CONTACTS,
+} from '../../src/lib/safety-data';
+import { useAppStore } from '../../src/store/use-app-store';
+import { fetchWeatherForCoords } from '../../src/lib/weather';
+
+const quickActions = [
+  { id: 'plan', label: 'Plan trip', icon: 'map-outline', route: '/screens/PlanTrip' },
+  { id: 'routes', label: 'Safe routes', icon: 'navigate-outline', route: '/screens/TravelRoutes' },
+  { id: 'incident', label: 'Report', icon: 'megaphone-outline', route: '/screens/Reports' },
+  { id: 'sos', label: 'Emergency', icon: 'alert-circle-outline', route: '/screens/Emergency' },
+];
 
 const HomeScreen = () => {
   const router = useRouter();
-  // SOS button handled by SOSButton component (animated internally)
+  const { trips, trustedContacts } = useAppStore();
+  const [weather, setWeather] = useState({ temperature: '--', condition: 'Loading...', icon: 'cloud-outline' });
 
-  const userLocation = {
-    latitude: 37.78825,
-    longitude: -122.4324,
-    latitudeDelta: 0.0922,
-    longitudeDelta: 0.0421,
+  const upcomingTrip = useMemo(() => {
+    const sorted = [...trips].sort((a, b) => new Date(a.startDate).getTime() - new Date(b.startDate).getTime());
+    return sorted.find((trip) => new Date(trip.startDate) >= new Date());
+  }, [trips]);
+
+  useEffect(() => {
+    fetchWeatherForCoords(28.6139, 77.209).then((data) => setWeather(data));
+  }, []);
+
+  const contactsToShow = trustedContacts.length > 0 ? trustedContacts : STATIC_CONTACTS;
+
+  const handleDial = (value: string) => {
+    Linking.openURL(`tel:${value}`).catch(() => router.push('/screens/Emergency'));
   };
-
-  const riskZones = [
-    { id: 1, coordinate: { latitude: 37.78, longitude: -122.44 }, risk: 'High' },
-    { id: 2, coordinate: { latitude: 37.79, longitude: -122.42 }, risk: 'Medium' },
-    { id: 3, coordinate: { latitude: 37.77, longitude: -122.45 }, risk: 'Low' },
-  ];
-
-  const nearbySafetyZones = [
-    { id: 1, name: 'City Hospital', type: 'Hospital', distance: '2.5 km' },
-    { id: 2, name: 'Police Station Central', type: 'Police', distance: '1.1 km' },
-    { id: 3, name: 'Tourist Info Center', type: 'Help', distance: '0.8 km' },
-  ];
-
-  const safetyAlerts = [
-    { id: 1, message: 'Heavy rain advisory in effect until 6 PM.', type: 'Weather' },
-    { id: 2, message: 'Protest expected near downtown area today.', type: 'Unrest' },
-  ];
-
-  const weatherData = {
-    temperature: '22°C',
-    condition: 'Partly Cloudy',
-    icon: 'cloudy-outline',
-  };
-
-  const getRiskColor = (risk: string) => {
-    if (risk === 'High') return Theme.colors.riskHigh;
-    if (risk === 'Medium') return Theme.colors.riskMedium;
-    return Theme.colors.riskLow;
-  };
-
-  const handleSos = () => {
-    router.push('/screens/SOSScreen');
-  };
-
-  // animateSosButton removed; SOSButton handles its own animation
 
   return (
-    <View style={styles.container}>
-      <View style={styles.header}>
-        <View style={styles.weatherContainer}>
-          <Ionicons name={weatherData.icon as any} size={24} color={Theme.colors.darkGray} />
-          <Text style={styles.weatherText}>{weatherData.temperature}, {weatherData.condition}</Text>
-        </View>
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.alertsBar}>
-          {safetyAlerts.map(alert => (
-            <View key={alert.id} style={styles.alertItem}>
-              <Ionicons name="warning-outline" size={16} color={Theme.colors.warning} />
-              <Text style={styles.alertText}>{alert.message}</Text>
+    <Screen style={styles.screen}>
+      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
+        <LinearGradient colors={['#0f2027', '#203a43', '#2c5364']} style={styles.hero}>
+          <View style={styles.heroHeader}>
+            <View>
+              <Text style={styles.heroLabel}>New Delhi · Tonight</Text>
+              <Text style={styles.heroTitle}>Stay situationally aware</Text>
             </View>
+            <View style={styles.weatherCard}>
+              <Ionicons name={weather.icon as any} size={20} color={Theme.colors.white} />
+              <Text style={styles.weatherValue}>{weather.temperature}</Text>
+              <Text style={styles.weatherLabel}>{weather.condition}</Text>
+            </View>
+          </View>
+          {upcomingTrip ? (
+            <Text style={styles.heroTrip}>
+              Next: {upcomingTrip.city} ({upcomingTrip.startDate} → {upcomingTrip.endDate})
+            </Text>
+          ) : (
+            <Text style={styles.heroTrip}>No active trips. Plan one to unlock tailored alerts.</Text>
+          )}
+        </LinearGradient>
+
+        <View style={styles.quickActionsRow}>
+          {quickActions.map((action) => (
+            <TouchableOpacity key={action.id} style={styles.quickAction} onPress={() => router.push(action.route)}>
+              <View style={styles.quickActionIcon}>
+                <Ionicons name={action.icon as any} size={20} color={Theme.colors.primary} />
+              </View>
+              <Text style={styles.quickActionLabel}>{action.label}</Text>
+            </TouchableOpacity>
+          ))}
+        </View>
+
+        <SectionHeader title="City safety metrics" subtitle="Powered by live crowd data" />
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.metricsRow}>
+          {SAFETY_METRICS.map((metric) => (
+            <MetricCard key={metric.id} metric={metric} />
           ))}
         </ScrollView>
-      </View>
 
-      <MapView
-        provider={PROVIDER_DEFAULT}
-        style={styles.map}
-        initialRegion={userLocation}
-      >
-        <Marker coordinate={userLocation} pinColor={Theme.colors.primary} />
-        {riskZones.map((zone) => (
-          <Circle
-            key={zone.id}
-            center={zone.coordinate}
-            radius={500}
-            fillColor={getRiskColor(zone.risk)}
-            strokeWidth={0}
+        <SectionHeader title="Live alerts" actionLabel="View reports" onActionPress={() => router.push('/screens/Reports')} />
+        {SAFETY_ALERTS.map((alert) => (
+          <AlertCard key={alert.id} alert={alert} onViewMap={() => router.push('/screens/Emergency')} />
+        ))}
+
+        <Card style={styles.mapCard}>
+          <SectionHeader title="Safe zones around you" subtitle="Trust badges updated every 10 min" />
+          <MapPreview
+            region={{ latitude: 28.6143, longitude: 77.2089, latitudeDelta: 0.04, longitudeDelta: 0.04 }}
+            markers={SAFE_SPOTS.map((spot) => ({
+              id: spot.id,
+              coordinate: { latitude: spot.latitude, longitude: spot.longitude },
+              label: spot.name,
+            }))}
+            circles={SAFETY_ALERTS.map((alert) => ({
+              id: alert.id,
+              center: { latitude: alert.latitude, longitude: alert.longitude },
+              radius: alert.impactRadius,
+              strokeColor: Theme.colors.warning,
+              fillColor: 'rgba(255,193,7,0.15)',
+            }))}
           />
-        ))}
-      </MapView>
+        </Card>
 
-      <ScrollView style={styles.safetyZonesContainer}>
-        <Text style={styles.sectionTitle}>Nearby Safety Zones</Text>
-        {nearbySafetyZones.map(zone => (
-          <SafetyCard key={zone.id} title={zone.name} subtitle={zone.type} distance={zone.distance} />
-        ))}
+        <Card style={styles.sectionCard}>
+          <SectionHeader title="Trusted contacts" subtitle="Auto notify when SOS triggers" />
+          {contactsToShow.slice(0, 3).map((contact) => (
+            <View key={contact.id} style={styles.contactRow}>
+              <View style={styles.contactAvatar}>
+                <Text style={styles.contactInitial}>{contact.name.charAt(0)}</Text>
+              </View>
+              <View style={styles.contactBody}>
+                <Text style={styles.contactName}>{contact.name}</Text>
+                <Text style={styles.contactMeta}>{contact.phone}</Text>
+              </View>
+              <Ionicons name="chatbubble-ellipses-outline" size={18} color={Theme.colors.subtleText} />
+            </View>
+          ))}
+          <AppButton title="Manage contacts" variant="ghost" onPress={() => router.push('/tabs/profile')} />
+        </Card>
+
+        <Card style={styles.sectionCard}>
+          <SectionHeader title="Preparedness" subtitle="Travel kit status" />
+          {PREPAREDNESS.map((section) => (
+            <View key={section.id} style={styles.prepBlock}>
+              <Text style={styles.prepTitle}>{section.title}</Text>
+              {section.items.map((item) => (
+                <Text key={item} style={styles.prepItem}>
+                  • {item}
+                </Text>
+              ))}
+            </View>
+          ))}
+        </Card>
+
+        <Card style={styles.sectionCard}>
+          <SectionHeader title="Hotlines" subtitle="Tap to dial" />
+          {RESOURCE_LINKS.map((resource) => (
+            <View key={resource.id} style={styles.resourceRow}>
+              <View>
+                <Text style={styles.resourceTitle}>{resource.title}</Text>
+                <Text style={styles.resourceSummary}>{resource.summary}</Text>
+              </View>
+              <TouchableOpacity style={styles.resourceButton} onPress={() => handleDial(resource.contactValue)}>
+                <Ionicons name="call-outline" size={18} color={Theme.colors.white} />
+                <Text style={styles.resourceButtonText}>{resource.contactValue}</Text>
+              </TouchableOpacity>
+            </View>
+          ))}
+        </Card>
       </ScrollView>
-
-      <View style={styles.sosButtonContainer}>
-        <SOSButton onPress={handleSos} />
-      </View>
-    </View>
+    </Screen>
   );
 };
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: Theme.colors.white,
+  screen: {
+    backgroundColor: Theme.colors.background,
   },
-  header: {
-    padding: Theme.spacing.md,
-    backgroundColor: Theme.colors.lightGray,
-    borderBottomWidth: 1,
-    borderBottomColor: Theme.colors.mediumGray,
+  scrollContent: {
+    paddingBottom: Theme.spacing.xl,
   },
-  weatherContainer: {
+  hero: {
+    borderRadius: Theme.radius.lg,
+    padding: Theme.spacing.lg,
+    marginBottom: Theme.spacing.lg,
+  },
+  heroHeader: {
     flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: Theme.spacing.sm,
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
   },
-  weatherText: {
-    marginLeft: Theme.spacing.xs,
-    fontSize: Theme.font.size.sm,
+  heroLabel: {
+    color: 'rgba(255,255,255,0.8)',
     fontFamily: Theme.font.family.sans,
-    color: Theme.colors.darkGray,
   },
-  alertsBar: {
-    flexDirection: 'row',
+  heroTitle: {
+    fontFamily: Theme.font.family.sansBold,
+    fontSize: Theme.font.size.xl,
+    color: Theme.colors.white,
   },
-  alertItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: Theme.colors.white,
-    paddingVertical: Theme.spacing.xs,
-    paddingHorizontal: Theme.spacing.sm,
+  weatherCard: {
+    backgroundColor: 'rgba(255,255,255,0.15)',
     borderRadius: Theme.radius.md,
-    marginRight: Theme.spacing.sm,
+    padding: Theme.spacing.sm,
+    alignItems: 'center',
+    minWidth: 90,
+  },
+  weatherValue: {
+    fontFamily: Theme.font.family.sansBold,
+    color: Theme.colors.white,
+    fontSize: Theme.font.size.lg,
+  },
+  weatherLabel: {
+    fontFamily: Theme.font.family.sans,
+    color: 'rgba(255,255,255,0.8)',
+  },
+  heroTrip: {
+    marginTop: Theme.spacing.md,
+    fontFamily: Theme.font.family.sans,
+    color: 'rgba(255,255,255,0.9)',
+  },
+  quickActionsRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginBottom: Theme.spacing.lg,
+  },
+  quickAction: {
+    flex: 1,
+    marginHorizontal: 4,
+    backgroundColor: Theme.colors.white,
+    borderRadius: Theme.radius.lg,
+    paddingVertical: Theme.spacing.md,
+    alignItems: 'center',
     ...Theme.shadows.sm,
   },
-  alertText: {
-    marginLeft: Theme.spacing.xs,
-    fontSize: Theme.font.size.sm,
-    fontFamily: Theme.font.family.sans,
-    color: Theme.colors.darkGray,
-  },
-  map: {
-    flex: 1,
-    minHeight: 300, // Ensure map has a minimum height
-  },
-  safetyZonesContainer: {
-    maxHeight: 200, // Limit height for scrollable list
-    padding: Theme.spacing.md,
-    borderTopWidth: 1,
-    borderTopColor: Theme.colors.mediumGray,
-  },
-  sectionTitle: {
-    fontSize: Theme.font.size.lg,
-    fontFamily: Theme.font.family.sansBold,
-    color: Theme.colors.primary,
-    marginBottom: Theme.spacing.md,
-  },
-  safetyZoneItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingVertical: Theme.spacing.sm,
-    borderBottomWidth: 1,
-    borderBottomColor: Theme.colors.lightGray,
-  },
-  safetyZoneName: {
-    flex: 1,
-    marginLeft: Theme.spacing.sm,
-    fontSize: Theme.font.size.md,
-    fontFamily: Theme.font.family.sans,
-  },
-  safetyZoneDistance: {
-    fontSize: Theme.font.size.sm,
-    fontFamily: Theme.font.family.sans,
-    color: Theme.colors.darkGray,
-  },
-  sosButtonContainer: {
-    position: 'absolute',
-    bottom: Theme.spacing.lg,
-    alignSelf: 'center',
-  },
-  sosButton: {
-    backgroundColor: Theme.colors.danger, // Red for SOS
-    width: 70,
-    height: 70,
-    borderRadius: Theme.radius.full,
+  quickActionIcon: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: 'rgba(0,191,165,0.15)',
     justifyContent: 'center',
     alignItems: 'center',
-    ...Theme.shadows.lg,
+    marginBottom: Theme.spacing.xs,
+  },
+  quickActionLabel: {
+    fontFamily: Theme.font.family.sansBold,
+    color: Theme.colors.text,
+  },
+  metricsRow: {
+    paddingBottom: Theme.spacing.lg,
+  },
+  mapCard: {
+    marginVertical: Theme.spacing.lg,
+    paddingBottom: 0,
+  },
+  sectionCard: {
+    marginBottom: Theme.spacing.lg,
+  },
+  contactRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: Theme.spacing.md,
+  },
+  contactAvatar: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: Theme.colors.card,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: Theme.spacing.md,
+  },
+  contactInitial: {
+    fontFamily: Theme.font.family.sansBold,
+    fontSize: Theme.font.size.lg,
+    color: Theme.colors.primary,
+  },
+  contactBody: {
+    flex: 1,
+  },
+  contactName: {
+    fontFamily: Theme.font.family.sansBold,
+    color: Theme.colors.text,
+  },
+  contactMeta: {
+    fontFamily: Theme.font.family.sans,
+    color: Theme.colors.subtleText,
+  },
+  prepBlock: {
+    marginBottom: Theme.spacing.md,
+  },
+  prepTitle: {
+    fontFamily: Theme.font.family.sansBold,
+    marginBottom: Theme.spacing.xs,
+    color: Theme.colors.text,
+  },
+  prepItem: {
+    fontFamily: Theme.font.family.sans,
+    color: Theme.colors.subtleText,
+  },
+  resourceRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: Theme.spacing.md,
+  },
+  resourceTitle: {
+    fontFamily: Theme.font.family.sansBold,
+    color: Theme.colors.text,
+  },
+  resourceSummary: {
+    fontFamily: Theme.font.family.sans,
+    color: Theme.colors.subtleText,
+  },
+  resourceButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: Theme.colors.primary,
+    borderRadius: Theme.radius.full,
+    paddingHorizontal: Theme.spacing.md,
+    paddingVertical: Theme.spacing.xs,
+    gap: Theme.spacing.xs,
+  },
+  resourceButtonText: {
+    fontFamily: Theme.font.family.sansBold,
+    color: Theme.colors.white,
   },
 });
 

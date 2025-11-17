@@ -1,92 +1,106 @@
-import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Switch, ScrollView } from 'react-native';
-import { Theme } from '../../constants/theme';
+// UI Revamp – new Settings screen layout and styles.
 import { Ionicons } from '@expo/vector-icons';
+import React from 'react';
+import { View, Text, StyleSheet, Switch, TouchableOpacity, ScrollView, Platform } from 'react-native';
+import { Theme } from '../../constants/theme';
+import { useAppStore } from '../../src/store/use-app-store';
+import Screen from '../../components/ui/Screen'; // UI Revamp - Use new Screen component
+import Card from '../../components/ui/Card'; // UI Revamp - Use new Card component
 
 const SettingsScreen = () => {
-  const [isNotificationsEnabled, setIsNotificationsEnabled] = React.useState(true);
-  const [isLocationSharingEnabled, setIsLocationSharingEnabled] = React.useState(true);
-  const [isDarkModeEnabled, setIsDarkModeEnabled] = React.useState(false);
+  const { theme, setTheme, language, setLanguage } = useAppStore();
+
+  const toggleTheme = () => {
+    setTheme(theme === 'light' ? 'dark' : 'light');
+  };
+
+  const toggleLanguage = () => {
+    setLanguage(language === 'en' ? 'hi' : 'en');
+  };
 
   return (
-    <ScrollView style={styles.container}>
-      <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Privacy</Text>
-        <View style={styles.item}>
-          <Text style={styles.itemText}>Share Location</Text>
-          <Switch
-            trackColor={{ false: Theme.colors.lightGray, true: Theme.colors.primary }}
-            thumbColor={isLocationSharingEnabled ? Theme.colors.white : Theme.colors.lightGray}
-            onValueChange={() => setIsLocationSharingEnabled(previousState => !previousState)}
-            value={isLocationSharingEnabled}
-          />
-        </View>
-      </View>
+    <Screen style={styles.screen}>
+      <ScrollView showsVerticalScrollIndicator={false}>
+        {/* UI Revamp - Removed custom header, relying on tab navigator header */}
 
-      <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Notifications</Text>
-        <View style={styles.item}>
-          <Text style={styles.itemText}>Emergency Alerts</Text>
-          <Switch
-            trackColor={{ false: Theme.colors.lightGray, true: Theme.colors.primary }}
-            thumbColor={isNotificationsEnabled ? Theme.colors.white : Theme.colors.lightGray}
-            onValueChange={() => setIsNotificationsEnabled(previousState => !previousState)}
-            value={isNotificationsEnabled}
-          />
+        <View style={styles.sectionContainer}>
+          <Text style={styles.sectionTitle}>Display</Text>
+          <Card style={styles.card}>
+            <View style={styles.item}>
+              <Text style={styles.itemText}>Dark Mode</Text>
+              <Switch
+                trackColor={{ false: Theme.colors.lightGray, true: Theme.colors.primary }}
+                thumbColor={Platform.OS === 'android' ? Theme.colors.white : Theme.colors.white} // UI Revamp - Consistent thumb color
+                ios_backgroundColor={Theme.colors.lightGray} // UI Revamp - iOS background color
+                onValueChange={toggleTheme}
+                value={theme === 'dark'}
+              />
+            </View>
+          </Card>
         </View>
-      </View>
 
-      <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Display</Text>
-        <View style={styles.item}>
-          <Text style={styles.itemText}>Dark Mode</Text>
-          <Switch
-            trackColor={{ false: Theme.colors.lightGray, true: Theme.colors.primary }}
-            thumbColor={isDarkModeEnabled ? Theme.colors.white : Theme.colors.lightGray}
-            onValueChange={() => setIsDarkModeEnabled(previousState => !previousState)}
-            value={isDarkModeEnabled}
-          />
+        <View style={styles.sectionContainer}>
+          <Text style={styles.sectionTitle}>Language</Text>
+          <Card style={styles.card}>
+            <TouchableOpacity style={styles.item} onPress={toggleLanguage}>
+              <Text style={styles.itemText}>{language === 'en' ? 'English' : 'Hindi'}</Text>
+              <Ionicons name="chevron-forward-outline" size={24} color={Theme.colors.subtleText} />
+            </TouchableOpacity>
+          </Card>
         </View>
-      </View>
 
-      <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Language</Text>
-        <TouchableOpacity style={styles.item}>
-          <Text style={styles.itemText}>English</Text>
-          <Ionicons name="chevron-forward" size={24} color={Theme.colors.darkGray} />
-        </TouchableOpacity>
-      </View>
-    </ScrollView>
+        <View style={styles.sectionContainer}>
+          <Text style={styles.sectionTitle}>Legal</Text>
+          <Card style={styles.card}>
+            <TouchableOpacity style={styles.item} onPress={() => {}}>
+              <Text style={styles.itemText}>Terms of Service</Text>
+              <Ionicons name="chevron-forward-outline" size={24} color={Theme.colors.subtleText} />
+            </TouchableOpacity>
+            <View style={styles.separator} />
+            <TouchableOpacity style={styles.item} onPress={() => {}}>
+              <Text style={styles.itemText}>Privacy Policy</Text>
+              <Ionicons name="chevron-forward-outline" size={24} color={Theme.colors.subtleText} />
+            </TouchableOpacity>
+          </Card>
+        </View>
+      </ScrollView>
+    </Screen>
   );
 };
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: Theme.colors.white,
+  screen: {
+    backgroundColor: Theme.colors.background,
   },
-  section: {
-    marginTop: Theme.spacing.lg,
-    paddingHorizontal: Theme.spacing.lg,
+  sectionContainer: {
+    marginBottom: Theme.spacing.md,
+    paddingHorizontal: Theme.spacing.md,
   },
   sectionTitle: {
     fontSize: Theme.font.size.lg,
     fontFamily: Theme.font.family.sansBold,
-    color: Theme.colors.primary,
+    color: Theme.colors.text, // UI Revamp - Use theme text color
     marginBottom: Theme.spacing.md,
+  },
+  card: {
+    padding: 0, // Card component already has padding, adjust if needed
   },
   item: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
     paddingVertical: Theme.spacing.md,
-    borderBottomWidth: 1,
-    borderBottomColor: Theme.colors.lightGray,
+    paddingHorizontal: Theme.spacing.md,
   },
   itemText: {
     fontSize: Theme.font.size.md,
     fontFamily: Theme.font.family.sans,
-    color: Theme.colors.darkGray,
+    color: Theme.colors.text, // UI Revamp - Use theme text color
+  },
+  separator: {
+    height: 1,
+    backgroundColor: Theme.colors.lightGray,
+    marginHorizontal: Theme.spacing.md,
   },
 });
 

@@ -1,129 +1,112 @@
-import React from 'react';
-import { View, Text, StyleSheet, Image, TouchableOpacity, ScrollView } from 'react-native';
-import { Theme } from '../../constants/theme';
+// UI Revamp – new User Profile screen layout and styles.
 import { Ionicons } from '@expo/vector-icons';
+import { useRouter } from 'expo-router';
+import React from 'react';
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView } from 'react-native';
+import { Theme } from '../../constants/theme';
+import { useAppStore } from '../../src/store/use-app-store';
+import Screen from '../../components/ui/Screen'; // UI Revamp - Use new Screen component
+import Card from '../../components/ui/Card'; // UI Revamp - Use new Card component
 
 const UserProfileScreen = () => {
-  const emergencyContacts = [
-    { id: 1, name: 'John Doe', phone: '123-456-7890' },
-    { id: 2, name: 'Jane Smith', phone: '098-765-4321' },
+  const router = useRouter();
+  const { userProfile, trustedContacts, incidentReports, savedPlaces } = useAppStore();
+
+  const profileSections = [
+    { title: 'Trusted Contacts', count: trustedContacts.length, onPress: () => {} },
+    { title: 'My Reports', count: incidentReports.length, onPress: () => {} },
+    { title: 'Saved Places', count: savedPlaces.length, onPress: () => {} },
+    { title: 'Preferences', icon: 'chevron-forward-outline', onPress: () => router.push('/tabs/settings') },
   ];
 
   return (
-    <ScrollView style={styles.container}>
-      <View style={styles.profileHeader}>
-        <Image
-          source={{ uri: 'https://randomuser.me/api/portraits/men/32.jpg' }}
-          style={styles.profileImage}
-        />
-        <Text style={styles.profileName}>John Appleseed</Text>
-      </View>
-
-      <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Emergency Contacts</Text>
-        {emergencyContacts.map(contact => (
-          <View key={contact.id} style={styles.contactItem}>
-            <View>
-              <Text style={styles.contactName}>{contact.name}</Text>
-              <Text style={styles.contactPhone}>{contact.phone}</Text>
-            </View>
-            <TouchableOpacity>
-              <Ionicons name="create-outline" size={24} color={Theme.colors.primary} />
-            </TouchableOpacity>
+    <Screen style={styles.screen}>
+      <ScrollView showsVerticalScrollIndicator={false}>
+        <View style={styles.profileHeader}>
+          <View style={styles.avatar}>
+            <Text style={styles.avatarInitial}>{userProfile.name.charAt(0)}</Text>
           </View>
-        ))}
-        <TouchableOpacity style={styles.addButton}>
-          <Ionicons name="add-circle-outline" size={24} color={Theme.colors.primary} />
-          <Text style={styles.addButtonText}>Add Contact</Text>
-        </TouchableOpacity>
-      </View>
-
-      <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Recent Alerts</Text>
-        {/* Placeholder for recent alerts */}
-        <View style={styles.alertItem}>
-          <Text style={styles.alertText}>High risk zone detected near your location.</Text>
-          <Text style={styles.alertDate}>2 hours ago</Text>
+          <Text style={styles.profileName}>{userProfile.name}</Text>
+          <Text style={styles.profileTagline}>{userProfile.tagline}</Text>
         </View>
-      </View>
-    </ScrollView>
+
+        <View style={styles.sectionsContainer}>
+          {profileSections.map((section, index) => (
+            <Card key={index} style={styles.sectionCard}>
+              <TouchableOpacity style={styles.sectionHeader} onPress={section.onPress}>
+                <Text style={styles.sectionTitle}>{section.title}</Text>
+                {section.count !== undefined ? (
+                  <Text style={styles.sectionCount}>{section.count}</Text>
+                ) : (
+                  <Ionicons name={section.icon as any} size={24} color={Theme.colors.subtleText} />
+                )}
+              </TouchableOpacity>
+            </Card>
+          ))}
+        </View>
+      </ScrollView>
+    </Screen>
   );
 };
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: Theme.colors.white,
+  screen: {
+    backgroundColor: Theme.colors.background,
   },
   profileHeader: {
     alignItems: 'center',
-    padding: Theme.spacing.lg,
-    backgroundColor: Theme.colors.lightGray,
+    paddingVertical: Theme.spacing.xl, // UI Revamp - Adjusted padding
+    backgroundColor: Theme.colors.white, // UI Revamp - White background for header
+    marginBottom: Theme.spacing.md, // UI Revamp - Add margin bottom
+    ...Theme.shadows.sm, // UI Revamp - Subtle shadow
   },
-  profileImage: {
+  avatar: {
     width: 100,
     height: 100,
     borderRadius: 50,
-    borderWidth: 3,
-    borderColor: Theme.colors.primary,
-  },
-  profileName: {
-    marginTop: Theme.spacing.md,
-    fontSize: Theme.font.size.xl,
-    fontFamily: Theme.font.family.sansBold,
-    color: Theme.colors.primary,
-  },
-  section: {
-    marginTop: Theme.spacing.lg,
-    paddingHorizontal: Theme.spacing.lg,
-  },
-  sectionTitle: {
-    fontSize: Theme.font.size.lg,
-    fontFamily: Theme.font.family.sansBold,
-    color: Theme.colors.primary,
+    backgroundColor: Theme.colors.primary,
+    justifyContent: 'center',
+    alignItems: 'center',
     marginBottom: Theme.spacing.md,
   },
-  contactItem: {
+  avatarInitial: {
+    fontSize: Theme.font.size['2xl'], // UI Revamp - Use theme font size
+    color: Theme.colors.white,
+    fontFamily: Theme.font.family.sansBold,
+  },
+  profileName: {
+    fontSize: Theme.font.size.xl,
+    fontFamily: Theme.font.family.sansBold,
+    color: Theme.colors.text, // UI Revamp - Use theme text color
+  },
+  profileTagline: {
+    marginTop: Theme.spacing.xs,
+    fontSize: Theme.font.size.md, // UI Revamp - Use theme font size
+    fontFamily: Theme.font.family.sans,
+    color: Theme.colors.subtleText, // UI Revamp - Use subtle text color
+  },
+  sectionsContainer: {
+    paddingHorizontal: Theme.spacing.md,
+  },
+  sectionCard: {
+    marginBottom: Theme.spacing.md,
+    paddingVertical: Theme.spacing.sm, // UI Revamp - Adjusted padding
+  },
+  sectionHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingVertical: Theme.spacing.md,
-    borderBottomWidth: 1,
-    borderBottomColor: Theme.colors.lightGray,
+    paddingHorizontal: Theme.spacing.sm, // UI Revamp - Add horizontal padding
   },
-  contactName: {
-    fontSize: Theme.font.size.md,
+  sectionTitle: {
+    fontSize: Theme.font.size.md, // UI Revamp - Use theme font size
+    fontFamily: Theme.font.family.sansBold,
+    color: Theme.colors.text, // UI Revamp - Use theme text color
+  },
+  sectionCount: {
+    fontSize: Theme.font.size.md, // UI Revamp - Use theme font size
     fontFamily: Theme.font.family.sans,
-  },
-  contactPhone: {
-    fontSize: Theme.font.size.sm,
-    color: Theme.colors.darkGray,
-  },
-  addButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginTop: Theme.spacing.md,
-  },
-  addButtonText: {
-    marginLeft: Theme.spacing.sm,
-    fontSize: Theme.font.size.md,
-    color: Theme.colors.primary,
-    fontFamily: Theme.font.family.sans,
-  },
-  alertItem: {
-    padding: Theme.spacing.md,
-    backgroundColor: Theme.colors.lightGray,
-    borderRadius: Theme.radius.md,
-    marginBottom: Theme.spacing.md,
-  },
-  alertText: {
-    fontSize: Theme.font.size.md,
-    fontFamily: Theme.font.family.sans,
-  },
-  alertDate: {
-    fontSize: Theme.font.size.sm,
-    color: Theme.colors.darkGray,
-    marginTop: Theme.spacing.sm,
+    color: Theme.colors.subtleText, // UI Revamp - Use subtle text color
   },
 });
 

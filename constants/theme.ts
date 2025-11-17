@@ -1,17 +1,22 @@
+// UI Revamp – new theme styles.
 import { Platform } from 'react-native';
 
 const COLORS = {
-  primary: '#4295E4', // Soft Blue
-  secondary: '#50C878', // Soft Green
-  accent: '#F0E68C', // Soft Yellow for highlighting
+  primary: '#00BFA5', // WhatsApp-green
+  secondary: '#3F51B5', // Muted blue
+  accent: '#3F51B5',
   
+  background: '#FFFFFF',
+  card: '#ECEFF1',
+  text: '#212121',
+  subtleText: '#757575',
+
   white: '#FFFFFF',
-  lightGray: '#F5F5F5',
-  mediumGray: '#D3D3D3',
-  darkGray: '#A9A9A9',
-  lightBlue: '#E0F7FA', // Light Blue for splash screen gradient
+  lightGray: '#ECEFF1',
+  mediumGray: '#B0BEC5',
+  darkGray: '#78909C',
   
-  black: '#000000',
+  black: '#212121',
   
   // Risk-related colors
   riskLow: '#FFD700', // Gold/Yellow
@@ -19,9 +24,9 @@ const COLORS = {
   riskHigh: '#FF4500', // OrangeRed
   
   // Status colors
-  success: '#28A745', // Green
-  warning: '#FFC107', // Yellow
-  danger: '#DC3545', // Red
+  success: '#4CAF50',
+  warning: '#FFC107',
+  danger: '#F44336',
 };
 
 const FONT_FAMILY = {
@@ -67,8 +72,8 @@ const SPACING = {
 };
 
 const BORDER_RADIUS = {
-  sm: 4,
-  md: 8,
+  sm: 8,
+  md: 12,
   lg: 16,
   xl: 24,
   full: 9999,
@@ -78,23 +83,23 @@ const SHADOWS = {
   sm: {
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.1,
+    shadowOpacity: 0.05,
     shadowRadius: 2,
-    elevation: 2,
+    elevation: 1,
   },
   md: {
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.15,
+    shadowOpacity: 0.1,
     shadowRadius: 4,
-    elevation: 4,
+    elevation: 3,
   },
   lg: {
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.2,
+    shadowOpacity: 0.15,
     shadowRadius: 8,
-    elevation: 8,
+    elevation: 5,
   },
 };
 

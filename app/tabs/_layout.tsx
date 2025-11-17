@@ -1,3 +1,4 @@
+// UI Revamp – new tab layout styles.
 import React from 'react';
 import { Tabs } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -8,20 +9,28 @@ export default function TabLayout() {
     <Tabs
       screenOptions={{
         tabBarActiveTintColor: Theme.colors.primary,
-        tabBarInactiveTintColor: Theme.colors.darkGray,
+        tabBarInactiveTintColor: Theme.colors.subtleText,
         tabBarStyle: {
           backgroundColor: Theme.colors.white,
           borderTopWidth: 0,
-          elevation: 5,
-          shadowOpacity: 0.1,
-          shadowRadius: 5,
+          elevation: 0, // Remove shadow for Android
+          shadowOpacity: 0, // Remove shadow for iOS
+          height: 60,
+          paddingBottom: 5,
+          paddingTop: 5,
+        },
+        tabBarLabelStyle: {
+          fontFamily: Theme.font.family.sansBold,
+          fontSize: Theme.font.size.xs,
         },
         headerStyle: {
-          backgroundColor: Theme.colors.white,
+          backgroundColor: Theme.colors.background,
+          shadowOpacity: 0, // Remove shadow for iOS
+          elevation: 0, // Remove shadow for Android
         },
         headerTitleStyle: {
           fontFamily: Theme.font.family.sansBold,
-          color: Theme.colors.primary,
+          color: Theme.colors.text,
         },
       }}
     >
@@ -33,17 +42,24 @@ export default function TabLayout() {
         }}
       />
       <Tabs.Screen
-        name="risk"
+        name="trips"
         options={{
-          title: 'Risk Map',
+          title: 'Trips',
           tabBarIcon: ({ color, size }) => <Ionicons name="map-outline" size={size} color={color} />,
         }}
       />
       <Tabs.Screen
-        name="emergency"
+        name="risk"
         options={{
-          title: 'Emergency',
-          tabBarIcon: ({ color, size }) => <Ionicons name="call-outline" size={size} color={color} />,
+          title: 'Risk Map',
+          tabBarIcon: ({ color, size }) => <Ionicons name="pulse-outline" size={size} color={color} />,
+        }}
+      />
+      <Tabs.Screen
+        name="help"
+        options={{
+          title: 'Help',
+          tabBarIcon: ({ color, size }) => <Ionicons name="chatbubble-ellipses-outline" size={size} color={color} />,
         }}
       />
       <Tabs.Screen

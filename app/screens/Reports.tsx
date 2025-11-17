@@ -1,68 +1,205 @@
-import React, { useState } from 'react';
-import { ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
-import MapView, { Marker } from 'react-native-maps';
+import React, { useMemo, useState } from 'react';
+import { View, Text, StyleSheet, TextInput, ScrollView, TouchableOpacity, Alert } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
+import Screen from '../../components/ui/Screen';
+import SectionHeader from '../../components/ui/SectionHeader';
+import Card from '../../components/ui/Card';
 import { Theme } from '../../constants/theme';
+import AppButton from '../../components/ui/AppButton';
+import MapPreview from '../../components/ui/MapPreview';
+import { useAppStore } from '../../src/store/use-app-store';
+
+const categories = ['theft', 'harassment', 'scam', 'unsafe-feeling', 'other'] as const;
 
 const ReportsScreen = () => {
-  const [category, setCategory] = useState('theft');
+  const { incidentReports, addIncidentReport } = useAppStore();
+  const [category, setCategory] = useState<(typeof categories)[number]>('unsafe-feeling');
+  const [location, setLocation] = useState('');
   const [description, setDescription] = useState('');
 
-  const submitReport = () => {
-    // Placeholder: In a real app this would send to a backend and be moderated
-    alert('Report submitted — thank you. Our moderation team will review it shortly.');
+  const recentReports = useMemo(() => incidentReports.slice(-5).reverse(), [incidentReports]);
+
+  const handleSubmit = () => {
+    if (!location || !description) {
+      Alert.alert('Add more detail', 'Location and description are required.');
+      return;
+    }
+    addIncidentReport({
+      id: Date.now().toString(),
+      category,
+      location,
+      description,
+      timestamp: new Date().toISOString(),
+    });
+    setLocation('');
     setDescription('');
+    Alert.alert('Submitted', 'Your report was queued for moderation.');
   };
 
   return (
-    <ScrollView style={styles.container} contentContainerStyle={{ padding: Theme.spacing.md }}>
-      <Text style={styles.title}>Report an Incident</Text>
+    <Screen style={styles.screen}>
+      <ScrollView showsVerticalScrollIndicator={false}>
+        <SectionHeader title="Report what you see" subtitle="Crowd-sourced tips make travel safer." />
+        <Card style={styles.card}>
+          <Text style={styles.inputLabel}>Category</Text>
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.chipRow}>
+            {categories.map((item) => (
+              <TouchableOpacity
+                key={item}
+                style={[styles.chip, category === item && styles.chipActive]}
+                onPress={() => setCategory(item)}
+              >
+                <Text style={[styles.chipText, category === item && styles.chipTextActive]}>{item.replace('-', ' ')}</Text>
+              </TouchableOpacity>
+            ))}
+          </ScrollView>
 
-      <Text style={styles.label}>Category</Text>
-      <View style={styles.pickerContainer}>
-        {['theft', 'harassment', 'accident', 'weather'].map((c) => (
-          <TouchableOpacity key={c} style={[styles.categoryOption, category === c && styles.categorySelected]} onPress={() => setCategory(c)}>
-            <Text style={[styles.categoryText, category === c && styles.categoryTextSelected]}>{c.charAt(0).toUpperCase() + c.slice(1)}</Text>
-          </TouchableOpacity>
-        ))}
-      </View>
+          <Text style={styles.inputLabel}>Location / landmark</Text>
+          <TextInput
+            style={styles.input}
+            placeholder="Market, metro gate, café..."
+            value={location}
+            onChangeText={setLocation}
+            placeholderTextColor={Theme.colors.subtleText}
+          />
 
-      <Text style={styles.label}>Description</Text>
-      <TextInput
-        style={styles.input}
-        multiline
-        numberOfLines={4}
-        placeholder="Describe what happened..."
-        value={description}
-        onChangeText={setDescription}
-      />
+          <Text style={styles.inputLabel}>What happened?</Text>
+          <TextInput
+            style={[styles.input, styles.multiline]}
+            placeholder="Keep it concise but detailed so others can act quickly."
+            value={description}
+            onChangeText={setDescription}
+            multiline
+            placeholderTextColor={Theme.colors.subtleText}
+          />
+          <AppButton title="Submit for moderation" onPress={handleSubmit} />
+        </Card>
 
-      <TouchableOpacity style={styles.submitButton} onPress={submitReport}>
-        <Text style={styles.submitButtonText}>Submit Report</Text>
-      </TouchableOpacity>
+        <SectionHeader title="Live map" subtitle="Heat spots from the last 12 hours" />
+        <Card style={styles.card}>
+          <MapPreview
+            region={{ latitude: 28.62, longitude: 77.21, latitudeDelta: 0.05, longitudeDelta: 0.05 }}
+            markers={recentReports.map((report, index) => ({
+              id: report.id,
+              coordinate: { latitude: 28.62 + index * 0.002, longitude: 77.21 + index * 0.002 },
+              label: report.location,
+            }))}
+            height={220}
+          />
+        </Card>
 
-      <Text style={[styles.title, { marginTop: Theme.spacing.lg }]}>Map (Tap to add location)</Text>
-      <View style={styles.mapPlaceholder}>
-        <MapView style={{ flex: 1 }} initialRegion={{ latitude: 37.781, longitude: -122.428, latitudeDelta: 0.03, longitudeDelta: 0.03 }}>
-          <Marker coordinate={{ latitude: 37.781, longitude: -122.428 }} />
-        </MapView>
-      </View>
-    </ScrollView>
+        <SectionHeader title="Community feed" subtitle="Verified submissions" />
+        {recentReports.length === 0 ? (
+          <Card>
+            <Text style={styles.emptyText}>No reports yet. Be the first to flag what you see.</Text>
+          </Card>
+        ) : (
+          recentReports.map((report) => (
+            <Card key={report.id} style={styles.reportCard}>
+              <View style={styles.reportHeader}>
+                <View style={styles.reportBadge}>
+                  <Ionicons name="alert-circle-outline" size={16} color={Theme.colors.white} />
+                </View>
+                <Text style={styles.reportCategory}>{report.category.toUpperCase()}</Text>
+                <Text style={styles.reportTime}>{new Date(report.timestamp).toLocaleTimeString()}</Text>
+              </View>
+              <Text style={styles.reportLocation}>{report.location}</Text>
+              <Text style={styles.reportDescription}>{report.description}</Text>
+            </Card>
+          ))
+        )}
+      </ScrollView>
+    </Screen>
   );
 };
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: Theme.colors.white },
-  title: { fontSize: Theme.font.size.lg, fontFamily: Theme.font.family.sansBold, color: Theme.colors.primary, marginBottom: Theme.spacing.md },
-  label: { fontSize: Theme.font.size.md, fontFamily: Theme.font.family.sans, color: Theme.colors.darkGray, marginBottom: Theme.spacing.xs },
-  pickerContainer: { borderWidth: 1, borderColor: Theme.colors.lightGray, borderRadius: Theme.radius.md, marginBottom: Theme.spacing.md, overflow: 'hidden', flexDirection: 'row', flexWrap: 'wrap', padding: Theme.spacing.xs },
-  categoryOption: { paddingVertical: Theme.spacing.xs, paddingHorizontal: Theme.spacing.sm, borderRadius: Theme.radius.sm, backgroundColor: Theme.colors.white, marginRight: Theme.spacing.xs, marginBottom: Theme.spacing.xs, borderWidth: 1, borderColor: Theme.colors.lightGray },
-  categorySelected: { backgroundColor: Theme.colors.primary, borderColor: Theme.colors.primary },
-  categoryText: { color: Theme.colors.darkGray, fontFamily: Theme.font.family.sans },
-  categoryTextSelected: { color: Theme.colors.white },
-  input: { borderWidth: 1, borderColor: Theme.colors.lightGray, borderRadius: Theme.radius.md, padding: Theme.spacing.sm, textAlignVertical: 'top', marginBottom: Theme.spacing.md },
-  submitButton: { backgroundColor: Theme.colors.primary, padding: Theme.spacing.md, borderRadius: Theme.radius.md, alignItems: 'center' },
-  submitButtonText: { color: Theme.colors.white, fontFamily: Theme.font.family.sansBold },
-  mapPlaceholder: { height: 200, borderRadius: Theme.radius.md, overflow: 'hidden', marginTop: Theme.spacing.md },
+  screen: {
+    backgroundColor: Theme.colors.background,
+  },
+  card: {
+    marginBottom: Theme.spacing.lg,
+  },
+  inputLabel: {
+    fontFamily: Theme.font.family.sansBold,
+    color: Theme.colors.text,
+    marginBottom: Theme.spacing.xs,
+  },
+  chipRow: {
+    paddingVertical: Theme.spacing.sm,
+  },
+  chip: {
+    borderWidth: 1,
+    borderColor: Theme.colors.lightGray,
+    borderRadius: Theme.radius.full,
+    paddingHorizontal: Theme.spacing.md,
+    paddingVertical: Theme.spacing.xs,
+    marginRight: Theme.spacing.sm,
+  },
+  chipActive: {
+    backgroundColor: Theme.colors.primary,
+    borderColor: Theme.colors.primary,
+  },
+  chipText: {
+    fontFamily: Theme.font.family.sans,
+    color: Theme.colors.text,
+    textTransform: 'capitalize',
+  },
+  chipTextActive: {
+    color: Theme.colors.white,
+  },
+  input: {
+    borderRadius: Theme.radius.md,
+    borderWidth: 1,
+    borderColor: Theme.colors.lightGray,
+    padding: Theme.spacing.md,
+    fontFamily: Theme.font.family.sans,
+    color: Theme.colors.text,
+    marginBottom: Theme.spacing.md,
+  },
+  multiline: {
+    minHeight: 120,
+    textAlignVertical: 'top',
+  },
+  emptyText: {
+    fontFamily: Theme.font.family.sans,
+    color: Theme.colors.subtleText,
+  },
+  reportCard: {
+    marginBottom: Theme.spacing.md,
+  },
+  reportHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Theme.spacing.sm,
+    marginBottom: Theme.spacing.xs,
+  },
+  reportBadge: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    backgroundColor: Theme.colors.primary,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  reportCategory: {
+    fontFamily: Theme.font.family.sansBold,
+    color: Theme.colors.text,
+  },
+  reportTime: {
+    fontFamily: Theme.font.family.sans,
+    color: Theme.colors.subtleText,
+  },
+  reportLocation: {
+    fontFamily: Theme.font.family.sansBold,
+    fontSize: Theme.font.size.md,
+    marginBottom: Theme.spacing.xs,
+    color: Theme.colors.text,
+  },
+  reportDescription: {
+    fontFamily: Theme.font.family.sans,
+    color: Theme.colors.text,
+  },
 });
 
 export default ReportsScreen;

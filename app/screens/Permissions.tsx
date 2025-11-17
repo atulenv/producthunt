@@ -1,115 +1,72 @@
-import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Switch } from 'react-native';
-import { Theme } from '../../constants/theme';
+// UI Revamp – new Permissions screen layout and styles.
 import { useRouter } from 'expo-router';
+import React from 'react';
+import { Text, StyleSheet } from 'react-native';
+import { Theme } from '../../constants/theme';
+import * as Location from 'expo-location';
+import * as Notifications from 'expo-notifications';
+import Screen from '../../components/ui/Screen'; // UI Revamp - Use new Screen component
+import Card from '../../components/ui/Card'; // UI Revamp - Use new Card component
+import AppButton from '../../components/ui/AppButton'; // UI Revamp - Use new AppButton component
 
 const PermissionsScreen = () => {
   const router = useRouter();
-  const [locationPermission, setLocationPermission] = React.useState(false);
-  const [notificationPermission, setNotificationPermission] = React.useState(false);
 
-  const handleGrantPermissions = () => {
-    if (locationPermission && notificationPermission) {
+  const requestPermissions = async () => {
+    const { status: locationStatus } = await Location.requestForegroundPermissionsAsync();
+    const { status: notificationsStatus } = await Notifications.requestPermissionsAsync();
+
+    if (locationStatus === 'granted' && notificationsStatus === 'granted') {
       router.replace('/tabs/home');
     } else {
-      alert('Please grant all permissions to continue.');
+      // Handle permission denial
+      alert('Permissions not granted. Some features may not work.'); // UI Revamp - Simple alert for denial
     }
   };
 
   return (
-    <View style={styles.container}>
-      <Text style={styles.title}>We need your permission to ensure your safety</Text>
-      <Text style={styles.instructions}>
-        To provide you with the best safety features, we need access to your location and permission to send notifications.
-      </Text>
-
-      <View style={styles.permissionRow}>
-        <Text style={styles.permissionText}>Location Access</Text>
-        <Switch
-          trackColor={{ false: Theme.colors.lightGray, true: Theme.colors.primary }}
-          thumbColor={locationPermission ? Theme.colors.white : Theme.colors.lightGray}
-          onValueChange={() => setLocationPermission(previousState => !previousState)}
-          value={locationPermission}
-        />
-      </View>
-
-      <View style={styles.permissionRow}>
-        <Text style={styles.permissionText}>Notification Access</Text>
-        <Switch
-          trackColor={{ false: Theme.colors.lightGray, true: Theme.colors.primary }}
-          thumbColor={notificationPermission ? Theme.colors.white : Theme.colors.lightGray}
-          onValueChange={() => setNotificationPermission(previousState => !previousState)}
-          value={notificationPermission}
-        />
-      </View>
-
-      <TouchableOpacity style={styles.grantButton} onPress={handleGrantPermissions}>
-        <Text style={styles.grantButtonText}>Grant Permissions</Text>
-      </TouchableOpacity>
-
-      <TouchableOpacity style={styles.rejectButton} onPress={() => alert('Permissions rejected')}>
-        <Text style={styles.rejectButtonText}>Reject Permissions</Text>
-      </TouchableOpacity>
-    </View>
+    <Screen style={styles.screen}>
+      <Card style={styles.contentCard}>
+        <Text style={styles.title}>Permissions Required</Text>
+        <Text style={styles.description}>
+          To provide you with the best experience, we need access to your location and notifications.
+          This helps us offer real-time safety alerts and personalized recommendations.
+        </Text>
+        <AppButton title="Grant Permissions" onPress={requestPermissions} style={styles.button} />
+      </Card>
+    </Screen>
   );
 };
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: Theme.colors.white,
+  screen: {
+    backgroundColor: Theme.colors.background,
     justifyContent: 'center',
-    padding: Theme.spacing.lg,
+    alignItems: 'center',
+  },
+  contentCard: {
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: Theme.spacing.xl, // UI Revamp - Increased padding
+    marginHorizontal: Theme.spacing.md, // UI Revamp - Add horizontal margin
   },
   title: {
-    fontSize: Theme.font.size.xl,
+    fontSize: Theme.font.size['2xl'],
     fontFamily: Theme.font.family.sansBold,
+    color: Theme.colors.text, // UI Revamp - Use theme text color
     textAlign: 'center',
     marginBottom: Theme.spacing.md,
-    color: Theme.colors.primary,
   },
-  instructions: {
+  description: {
     fontSize: Theme.font.size.md,
     fontFamily: Theme.font.family.sans,
+    color: Theme.colors.subtleText, // UI Revamp - Use subtle text color
     textAlign: 'center',
-    marginBottom: Theme.spacing.lg,
-    color: Theme.colors.darkGray,
+    marginBottom: Theme.spacing.xl,
+    lineHeight: Theme.font.size.lg * 1.5, // UI Revamp - Improved readability
   },
-  permissionRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingVertical: Theme.spacing.md,
-    borderBottomWidth: 1,
-    borderBottomColor: Theme.colors.lightGray,
-  },
-  permissionText: {
-    fontSize: Theme.font.size.md,
-    fontFamily: Theme.font.family.sans,
-  },
-  grantButton: {
-    backgroundColor: Theme.colors.primary,
-    padding: Theme.spacing.md,
-    borderRadius: Theme.radius.md,
-    alignItems: 'center',
-    marginTop: Theme.spacing.lg,
-  },
-  grantButtonText: {
-    color: Theme.colors.white,
-    fontSize: Theme.font.size.lg,
-    fontFamily: Theme.font.family.sansBold,
-  },
-  rejectButton: {
-    backgroundColor: Theme.colors.lightGray,
-    padding: Theme.spacing.md,
-    borderRadius: Theme.radius.md,
-    alignItems: 'center',
-    marginTop: Theme.spacing.md,
-  },
-  rejectButtonText: {
-    color: Theme.colors.darkGray,
-    fontSize: Theme.font.size.lg,
-    fontFamily: Theme.font.family.sansBold,
+  button: {
+    width: '100%', // UI Revamp - Full width button
   },
 });
 
