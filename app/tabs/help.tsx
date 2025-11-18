@@ -70,7 +70,7 @@ const HelpScreen = () => {
               key={msg.id}
               style={[styles.messageBubble, msg.sender === 'user' ? styles.userBubble : styles.assistantBubble]}
             >
-              <Text style={styles.messageText}>{msg.text}</Text>
+              <Text style={[styles.messageText, msg.sender === 'user' && styles.messageTextUser]}>{msg.text}</Text>
             </View>
           ))}
           {isTyping && (
@@ -131,7 +131,7 @@ const styles = StyleSheet.create({
     ...Theme.shadows.sm,
   },
   userBubble: {
-    backgroundColor: '#DCF8C6',
+    backgroundColor: Theme.colors.primary,
     alignSelf: 'flex-end',
     borderTopLeftRadius: Theme.radius.lg,
     borderTopRightRadius: Theme.radius.sm,
@@ -150,6 +150,9 @@ const styles = StyleSheet.create({
     fontSize: Theme.font.size.md,
     fontFamily: Theme.font.family.sans,
     color: Theme.colors.text,
+  },
+  messageTextUser: {
+    color: Theme.colors.white,
   },
   inputContainer: {
     padding: Theme.spacing.md,

@@ -3,13 +3,20 @@ import React from 'react';
 import { View, StyleSheet, ViewProps } from 'react-native';
 import { Theme } from '@/constants/theme';
 
-interface CardProps extends ViewProps {
+type CardProps = ViewProps & {
   children: React.ReactNode;
-}
+  radius?: 'md' | 'lg' | 'xl';
+};
 
-const Card: React.FC<CardProps> = ({ children, style, ...props }) => {
+const radiusMap = {
+  md: Theme.radius.md,
+  lg: Theme.radius.lg,
+  xl: Theme.radius.xl,
+} as const;
+
+const Card: React.FC<CardProps> = ({ children, style, radius = 'lg', ...props }) => {
   return (
-    <View style={[styles.card, style]} {...props}>
+    <View style={[styles.card, { borderRadius: radiusMap[radius] }, style]} {...props}>
       {children}
     </View>
   );
@@ -17,10 +24,15 @@ const Card: React.FC<CardProps> = ({ children, style, ...props }) => {
 
 const styles = StyleSheet.create({
   card: {
-    backgroundColor: Theme.colors.white,
-    borderRadius: Theme.radius.lg,
+    backgroundColor: Theme.colors.card,
     padding: Theme.spacing.md,
-    ...Theme.shadows.md,
+    borderWidth: 1,
+    borderColor: 'rgba(18,24,38,0.04)',
+    shadowColor: '#0f172a',
+    shadowOffset: { width: 0, height: 16 },
+    shadowOpacity: 0.08,
+    shadowRadius: 24,
+    elevation: 3,
   },
 });
 

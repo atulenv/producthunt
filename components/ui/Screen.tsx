@@ -1,6 +1,8 @@
 // UI Revamp - New Screen component
 import React from 'react';
-import { View, StyleSheet, ViewProps, SafeAreaView } from 'react-native';
+import { View, StyleSheet, ViewProps } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { LinearGradient } from 'expo-linear-gradient';
 import { Theme } from '@/constants/theme';
 
 interface ScreenProps extends ViewProps {
@@ -9,18 +11,23 @@ interface ScreenProps extends ViewProps {
 
 const Screen: React.FC<ScreenProps> = ({ children, style, ...props }) => {
   return (
-    <SafeAreaView style={styles.safeArea}>
-      <View style={[styles.screen, style]} {...props}>
-        {children}
-      </View>
-    </SafeAreaView>
+    <LinearGradient colors={['#eef2ff', '#fafbff']} style={styles.gradient}>
+      <SafeAreaView style={styles.safeArea}>
+        <View style={[styles.screen, style]} {...props}>
+          {children}
+        </View>
+      </SafeAreaView>
+    </LinearGradient>
   );
 };
 
 const styles = StyleSheet.create({
+  gradient: {
+    flex: 1,
+  },
   safeArea: {
     flex: 1,
-    backgroundColor: Theme.colors.background,
+    backgroundColor: 'transparent',
   },
   screen: {
     flex: 1,

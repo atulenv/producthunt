@@ -2,8 +2,8 @@
 import { PropsWithChildren, useState } from 'react';
 import { StyleSheet, TouchableOpacity, View, Text } from 'react-native'; // UI Revamp - Use standard View and Text
 
-import { IconSymbol } from '@/components/ui/icon-symbol';
-import { Theme } from '@/constants/theme';
+import { IconSymbol } from './icon-symbol';
+import { Theme } from '../../constants/theme';
 
 export function Collapsible({ children, title }: PropsWithChildren & { title: string }) {
   const [isOpen, setIsOpen] = useState(false);

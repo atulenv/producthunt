@@ -9,7 +9,7 @@ import AppButton from '../../components/ui/AppButton';
 import MapPreview from '../../components/ui/MapPreview';
 import { useAppStore } from '../../src/store/use-app-store';
 
-const categories = ['theft', 'harassment', 'scam', 'unsafe-feeling', 'other'] as const;
+const categories = ['theft', 'harassment', 'danger', 'unsafe-feeling', 'other'] as const;
 
 const ReportsScreen = () => {
   const { incidentReports, addIncidentReport } = useAppStore();

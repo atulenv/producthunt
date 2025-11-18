@@ -2,31 +2,31 @@
 import { Platform } from 'react-native';
 
 const COLORS = {
-  primary: '#00BFA5', // WhatsApp-green
-  secondary: '#3F51B5', // Muted blue
-  accent: '#3F51B5',
-  
-  background: '#FFFFFF',
-  card: '#ECEFF1',
-  text: '#212121',
-  subtleText: '#757575',
+  primary: '#5563FF',
+  secondary: '#FF8DA1',
+  accent: '#7C3AED',
+
+  background: '#EEF2FF',
+  card: '#FFFFFF',
+  text: '#121826',
+  subtleText: '#5F6B8A',
 
   white: '#FFFFFF',
-  lightGray: '#ECEFF1',
-  mediumGray: '#B0BEC5',
-  darkGray: '#78909C',
-  
-  black: '#212121',
-  
+  lightGray: '#E4E8F6',
+  mediumGray: '#C7CEF0',
+  darkGray: '#3E4A66',
+
+  black: '#0F172A',
+
   // Risk-related colors
   riskLow: '#FFD700', // Gold/Yellow
   riskMedium: '#FFA500', // Orange
   riskHigh: '#FF4500', // OrangeRed
-  
+
   // Status colors
-  success: '#4CAF50',
-  warning: '#FFC107',
-  danger: '#F44336',
+  success: '#34D399',
+  warning: '#FBBF24',
+  danger: '#F43F5E',
 };
 
 const FONT_FAMILY = {

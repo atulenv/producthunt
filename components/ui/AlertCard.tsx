@@ -9,24 +9,54 @@ type Props = {
   onViewMap?: (alert: SafetyAlert) => void;
 };
 
+const levelConfig = {
+  critical: {
+    background: 'rgba(244,67,54,0.12)',
+    accent: Theme.colors.danger,
+    label: 'Critical',
+    icon: 'flame-outline',
+  },
+  warning: {
+    background: 'rgba(255,193,7,0.15)',
+    accent: Theme.colors.warning,
+    label: 'Warning',
+    icon: 'alert-circle-outline',
+  },
+  info: {
+    background: 'rgba(63,81,181,0.15)',
+    accent: Theme.colors.secondary,
+    label: 'Info',
+    icon: 'information-circle-outline',
+  },
+} as const;
+
 const AlertCard: React.FC<Props> = ({ alert, onViewMap }) => {
+  const config = levelConfig[alert.level];
   return (
-    <View style={[styles.card, styles[alert.level]]}>
-      <View style={styles.titleRow}>
-        <View style={styles.iconBadge}>
-          <Ionicons name="warning-outline" size={18} color={Theme.colors.white} />
+    <View style={[styles.card, { backgroundColor: config.background }]}>
+      <View style={styles.header}>
+        <View style={[styles.levelPill, { backgroundColor: config.accent }]}>
+          <Ionicons name={config.icon as any} size={16} color={Theme.colors.white} />
+          <Text style={styles.levelText}>{config.label}</Text>
         </View>
-        <View style={{ flex: 1 }}>
-          <Text style={styles.title}>{alert.title}</Text>
-          <Text style={styles.meta}>{alert.distanceKm} km · Updated {alert.updatedAt}</Text>
-        </View>
+        <Text style={styles.meta}>{alert.distanceKm} km · Updated {alert.updatedAt}</Text>
       </View>
       <Text style={styles.description}>{alert.description}</Text>
-      <Text style={styles.guidance}>{alert.guidance}</Text>
+      <View style={styles.footer}>
+        <Text style={styles.guidance}>{alert.guidance}</Text>
+        {onViewMap ? (
+          <TouchableOpacity style={[styles.button, { borderColor: config.accent }]} onPress={() => onViewMap(alert)}>
+            <Ionicons name="map-outline" size={16} color={config.accent} />
+            <Text style={[styles.buttonText, { color: config.accent }]}>Map</Text>
+          </TouchableOpacity>
+        ) : null}
+      </View>
       {onViewMap ? (
-        <TouchableOpacity style={styles.button} onPress={() => onViewMap(alert)}>
-          <Text style={styles.buttonText}>View on map</Text>
-          <Ionicons name="navigate-outline" size={16} color={Theme.colors.white} />
+        <TouchableOpacity style={styles.secondaryMeta} onPress={() => onViewMap(alert)}>
+          <Ionicons name="navigate-outline" size={16} color={config.accent} />
+          <Text style={[styles.viewMore, { color: config.accent }]}>
+            Impact radius {Math.round(alert.impactRadius)} m
+          </Text>
         </TouchableOpacity>
       ) : null}
     </View>
@@ -35,65 +65,72 @@ const AlertCard: React.FC<Props> = ({ alert, onViewMap }) => {
 
 const styles = StyleSheet.create({
   card: {
-    borderRadius: Theme.radius.lg,
+    borderRadius: Theme.radius.xl,
     padding: Theme.spacing.md,
     marginBottom: Theme.spacing.md,
   },
-  titleRow: {
+  header: {
     flexDirection: 'row',
+    justifyContent: 'space-between',
     alignItems: 'center',
     marginBottom: Theme.spacing.sm,
-    gap: Theme.spacing.sm,
   },
-  iconBadge: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    backgroundColor: 'rgba(255,255,255,0.2)',
-    justifyContent: 'center',
+  levelPill: {
+    flexDirection: 'row',
     alignItems: 'center',
+    gap: Theme.spacing.xs,
+    borderRadius: Theme.radius.full,
+    paddingHorizontal: Theme.spacing.sm,
+    paddingVertical: 4,
   },
-  title: {
+  levelText: {
     fontFamily: Theme.font.family.sansBold,
-    fontSize: Theme.font.size.md,
+    fontSize: Theme.font.size.xs,
     color: Theme.colors.white,
   },
   meta: {
     fontFamily: Theme.font.family.sans,
-    color: 'rgba(255,255,255,0.85)',
+    color: Theme.colors.darkGray,
     fontSize: Theme.font.size.sm,
   },
   description: {
     fontFamily: Theme.font.family.sans,
-    color: Theme.colors.white,
-    marginBottom: Theme.spacing.xs,
+    color: Theme.colors.text,
+    marginBottom: Theme.spacing.sm,
+  },
+  footer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: Theme.spacing.sm,
+    gap: Theme.spacing.sm,
   },
   guidance: {
     fontFamily: Theme.font.family.sans,
-    color: 'rgba(255,255,255,0.9)',
-    marginBottom: Theme.spacing.sm,
+    color: Theme.colors.text,
+    flex: 1,
   },
   button: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'center',
-    borderRadius: Theme.radius.full,
-    paddingVertical: Theme.spacing.xs,
-    backgroundColor: 'rgba(255,255,255,0.15)',
     gap: Theme.spacing.xs,
+    borderRadius: Theme.radius.full,
+    paddingHorizontal: Theme.spacing.sm,
+    paddingVertical: Theme.spacing.xs,
+    borderWidth: 1,
+    backgroundColor: Theme.colors.white,
   },
   buttonText: {
-    color: Theme.colors.white,
     fontFamily: Theme.font.family.sansBold,
   },
-  critical: {
-    backgroundColor: Theme.colors.danger,
+  secondaryMeta: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Theme.spacing.xs,
+    alignSelf: 'flex-start',
   },
-  warning: {
-    backgroundColor: Theme.colors.warning,
-  },
-  info: {
-    backgroundColor: Theme.colors.secondary,
+  viewMore: {
+    fontFamily: Theme.font.family.sansBold,
   },
 });
 

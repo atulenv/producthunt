@@ -21,7 +21,7 @@ export type TrustedContact = {
 
 export type IncidentReport = {
   id: string;
-  category: 'theft' | 'harassment' | 'scam' | 'unsafe-feeling' | 'other';
+  category: 'theft' | 'harassment' | 'danger' | 'unsafe-feeling' | 'other';
   location: string;
   description: string;
   timestamp: string;
@@ -33,14 +33,65 @@ export type SavedPlace = {
   location: string;
 };
 
+export type LanguageCode = 'en' | 'hi' | 'es' | 'fr' | 'ar';
+
+type EmergencyContact = {
+  name: string;
+  relation: string;
+  phone: string;
+  email: string;
+  address: string;
+};
+
+type MedicalInfo = {
+  bloodType: string;
+  allergies: string;
+  medications: string;
+  insuranceProvider: string;
+  insurancePolicy: string;
+  physicianContact: string;
+  medicalNotes: string;
+};
+
+type TravelPreferences = {
+  travelStyle: string;
+  accommodation: string;
+  transport: string;
+  dietary: string;
+  mobilityNeeds: string;
+  communication: string;
+};
+
+type UserProfile = {
+  name: string;
+  tagline: string;
+  homeBase: string;
+  dateOfBirth: string;
+  gender: string;
+  pronouns: string;
+  nationality: string;
+  passportNumber: string;
+  travelDocumentExpiry: string;
+  email: string;
+  phone: string;
+  languagesSpoken: string;
+  emergencyContact: EmergencyContact;
+  medicalInfo: MedicalInfo;
+  travelPreferences: TravelPreferences;
+  verificationNotes: string;
+};
+
+type DeepPartialUserProfile = Partial<Omit<UserProfile, 'emergencyContact' | 'medicalInfo' | 'travelPreferences'>> & {
+  emergencyContact?: Partial<EmergencyContact>;
+  medicalInfo?: Partial<MedicalInfo>;
+  travelPreferences?: Partial<TravelPreferences>;
+};
+
 type AppState = {
   onboardingCompleted: boolean;
   theme: 'light' | 'dark';
-  language: 'en' | 'hi';
-  userProfile: {
-    name: string;
-    tagline: string;
-  };
+  language: LanguageCode;
+  userProfile: UserProfile;
   trips: Trip[];
   trustedContacts: TrustedContact[];
   incidentReports: IncidentReport[];
@@ -50,11 +101,12 @@ type AppState = {
 type AppActions = {
   completeOnboarding: () => void;
   setTheme: (theme: 'light' | 'dark') => void;
-  setLanguage: (language: 'en' | 'hi') => void;
+  setLanguage: (language: LanguageCode) => void;
   addTrip: (trip: Trip) => void;
   addTrustedContact: (contact: TrustedContact) => void;
   addIncidentReport: (report: IncidentReport) => void;
   addSavedPlace: (place: SavedPlace) => void;
+  updateUserProfile: (updates: DeepPartialUserProfile) => void;
 };
 
 export const useAppStore = create<AppState & AppActions>((set) => ({
@@ -64,6 +116,41 @@ export const useAppStore = create<AppState & AppActions>((set) => ({
   userProfile: {
     name: 'John Doe',
     tagline: 'Solo traveler',
+    homeBase: 'Seattle, USA',
+    dateOfBirth: '14 Jan 1994',
+    gender: 'Male',
+    pronouns: 'He/Him',
+    nationality: 'American',
+    passportNumber: 'X1234567',
+    travelDocumentExpiry: 'Jun 2030',
+    email: 'john@example.com',
+    phone: '+1 206-555-0123',
+    languagesSpoken: 'English, Spanish',
+    emergencyContact: {
+      name: 'Maya Doe',
+      relation: 'Sister',
+      phone: '+1 206-555-0456',
+      email: 'maya@example.com',
+      address: '1234 5th Ave, Seattle, USA',
+    },
+    medicalInfo: {
+      bloodType: 'O+',
+      allergies: 'Peanuts',
+      medications: 'Vitamin D supplement',
+      insuranceProvider: 'Global Travel Shield',
+      insurancePolicy: 'GTS-99321',
+      physicianContact: '+1 206-555-0901',
+      medicalNotes: 'Carries inhaler for mild asthma',
+    },
+    travelPreferences: {
+      travelStyle: 'Solo explorer · food and night walks',
+      accommodation: 'Boutique hotels & vetted rentals',
+      transport: 'Verified taxis + metro',
+      dietary: 'Vegetarian · no peanuts',
+      mobilityNeeds: 'Avoid long staircases after injury',
+      communication: 'WhatsApp or SMS updates preferred',
+    },
+    verificationNotes: 'ID verified with embassy desk and concierge.',
   },
   trips: [],
   trustedContacts: [],
@@ -83,4 +170,23 @@ export const useAppStore = create<AppState & AppActions>((set) => ({
     })),
   addSavedPlace: (place) =>
     set((state) => ({ savedPlaces: [...state.savedPlaces, place] })),
+  updateUserProfile: (updates) =>
+    set((state) => {
+      const { emergencyContact, medicalInfo, travelPreferences, ...rest } = updates;
+      return {
+        userProfile: {
+          ...state.userProfile,
+          ...rest,
+          emergencyContact: emergencyContact
+            ? { ...state.userProfile.emergencyContact, ...emergencyContact }
+            : state.userProfile.emergencyContact,
+          medicalInfo: medicalInfo
+            ? { ...state.userProfile.medicalInfo, ...medicalInfo }
+            : state.userProfile.medicalInfo,
+          travelPreferences: travelPreferences
+            ? { ...state.userProfile.travelPreferences, ...travelPreferences }
+            : state.userProfile.travelPreferences,
+        },
+      };
+    }),
 }));

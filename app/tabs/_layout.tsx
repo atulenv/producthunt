@@ -11,22 +11,33 @@ export default function TabLayout() {
         tabBarActiveTintColor: Theme.colors.primary,
         tabBarInactiveTintColor: Theme.colors.subtleText,
         tabBarStyle: {
+          position: 'absolute',
+          left: Theme.spacing.md,
+          right: Theme.spacing.md,
+          bottom: Theme.spacing.md,
           backgroundColor: Theme.colors.white,
+          borderRadius: Theme.radius.full,
           borderTopWidth: 0,
-          elevation: 0, // Remove shadow for Android
-          shadowOpacity: 0, // Remove shadow for iOS
-          height: 60,
-          paddingBottom: 5,
-          paddingTop: 5,
+          height: 64,
+          paddingBottom: 8,
+          paddingTop: 8,
+          shadowColor: '#0f172a',
+          shadowOpacity: 0.08,
+          shadowRadius: 18,
+          elevation: 8,
         },
         tabBarLabelStyle: {
           fontFamily: Theme.font.family.sansBold,
           fontSize: Theme.font.size.xs,
         },
+        tabBarItemStyle: {
+          paddingVertical: 4,
+        },
+        tabBarHideOnKeyboard: true,
         headerStyle: {
           backgroundColor: Theme.colors.background,
-          shadowOpacity: 0, // Remove shadow for iOS
-          elevation: 0, // Remove shadow for Android
+          shadowOpacity: 0,
+          elevation: 0,
         },
         headerTitleStyle: {
           fontFamily: Theme.font.family.sansBold,
@@ -42,17 +53,10 @@ export default function TabLayout() {
         }}
       />
       <Tabs.Screen
-        name="trips"
-        options={{
-          title: 'Trips',
-          tabBarIcon: ({ color, size }) => <Ionicons name="map-outline" size={size} color={color} />,
-        }}
-      />
-      <Tabs.Screen
         name="risk"
         options={{
-          title: 'Risk Map',
-          tabBarIcon: ({ color, size }) => <Ionicons name="pulse-outline" size={size} color={color} />,
+          title: 'Map',
+          tabBarIcon: ({ color, size }) => <Ionicons name="map-outline" size={size} color={color} />,
         }}
       />
       <Tabs.Screen
@@ -67,13 +71,6 @@ export default function TabLayout() {
         options={{
           title: 'Profile',
           tabBarIcon: ({ color, size }) => <Ionicons name="person-outline" size={size} color={color} />,
-        }}
-      />
-      <Tabs.Screen
-        name="settings"
-        options={{
-          title: 'Settings',
-          tabBarIcon: ({ color, size }) => <Ionicons name="settings-outline" size={size} color={color} />,
         }}
       />
     </Tabs>
