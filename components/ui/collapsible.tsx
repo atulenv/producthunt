@@ -1,15 +1,18 @@
-// UI Revamp - Updated Collapsible component to use direct theme styling.
 import { PropsWithChildren, useState } from 'react';
-import { StyleSheet, TouchableOpacity, View, Text } from 'react-native'; // UI Revamp - Use standard View and Text
+import { StyleSheet, TouchableOpacity } from 'react-native';
 
-import { IconSymbol } from './icon-symbol';
-import { Theme } from '../../constants/theme';
+import { ThemedText } from '@/components/themed-text';
+import { ThemedView } from '@/components/themed-view';
+import { IconSymbol } from '@/components/ui/icon-symbol';
+import { Theme } from '@/constants/theme';
+import { useColorScheme } from '@/hooks/use-color-scheme';
 
 export function Collapsible({ children, title }: PropsWithChildren & { title: string }) {
   const [isOpen, setIsOpen] = useState(false);
+  const theme = useColorScheme() ?? 'light';
 
   return (
-    <View style={styles.container}> {/* UI Revamp - Replaced ThemedView with View */}
+    <ThemedView>
       <TouchableOpacity
         style={styles.heading}
         onPress={() => setIsOpen((value) => !value)}
@@ -18,30 +21,22 @@ export function Collapsible({ children, title }: PropsWithChildren & { title: st
           name="chevron.right"
           size={18}
           weight="medium"
-          color={Theme.colors.subtleText} // UI Revamp - Use subtleText color
+          color={theme === 'light' ? Theme.colors.darkGray : Theme.colors.darkGray}
           style={{ transform: [{ rotate: isOpen ? '90deg' : '0deg' }] }}
         />
 
-        <Text style={styles.titleText}>{title}</Text> {/* UI Revamp - Replaced ThemedText with Text */}
+        <ThemedText type="defaultSemiBold">{title}</ThemedText>
       </TouchableOpacity>
-      {isOpen && <View style={styles.content}>{children}</View>} {/* UI Revamp - Replaced ThemedView with View */}
-    </View>
+      {isOpen && <ThemedView style={styles.content}>{children}</ThemedView>}
+    </ThemedView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    backgroundColor: Theme.colors.background, // UI Revamp - Apply background color directly
-  },
   heading: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
-  },
-  titleText: {
-    fontSize: Theme.font.size.md, // UI Revamp - Apply font size
-    fontFamily: Theme.font.family.sansBold, // UI Revamp - Apply font family
-    color: Theme.colors.text, // UI Revamp - Apply text color
   },
   content: {
     marginTop: 6,

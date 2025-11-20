@@ -1,20 +1,31 @@
 // UI Revamp - New Screen component
 import React from 'react';
-import { View, StyleSheet, ViewProps } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { View, StyleSheet, ViewProps, StyleProp, ViewStyle } from 'react-native';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Theme } from '@/constants/theme';
 
 interface ScreenProps extends ViewProps {
   children: React.ReactNode;
+  contentStyle?: StyleProp<ViewStyle>;
+  footerInset?: number;
 }
 
-const Screen: React.FC<ScreenProps> = ({ children, style, ...props }) => {
+const Screen: React.FC<ScreenProps> = ({
+  children,
+  style,
+  contentStyle,
+  footerInset = 0,
+  ...props
+}) => {
+  const insets = useSafeAreaInsets();
+  const footerSpacing = footerInset + insets.bottom;
+
   return (
-    <LinearGradient colors={['#eef2ff', '#fafbff']} style={styles.gradient}>
+    <LinearGradient colors={['#eef2ff', '#f5e9ff', '#fff4eb']} style={styles.gradient}>
       <SafeAreaView style={styles.safeArea}>
-        <View style={[styles.screen, style]} {...props}>
-          {children}
+        <View style={[styles.screen, { paddingBottom: Theme.spacing.md + footerSpacing }, style]} {...props}>
+          <View style={[styles.content, contentStyle]}>{children}</View>
         </View>
       </SafeAreaView>
     </LinearGradient>
@@ -32,6 +43,11 @@ const styles = StyleSheet.create({
   screen: {
     flex: 1,
     padding: Theme.spacing.md,
+    gap: Theme.spacing.md,
+  },
+  content: {
+    flex: 1,
+    width: '100%',
   },
 });
 

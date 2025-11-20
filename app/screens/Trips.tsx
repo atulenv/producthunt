@@ -3,6 +3,7 @@ import { useRouter } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
 import React from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
+import type { StyleProp, ViewStyle } from 'react-native';
 import Screen from '../../components/ui/Screen';
 import Card from '../../components/ui/Card';
 import SectionHeader from '../../components/ui/SectionHeader';
@@ -21,6 +22,13 @@ const TripsScreen = () => {
     <Screen style={styles.screen}>
       <ScrollView showsVerticalScrollIndicator={false}>
         <LinearGradient colors={['#003049', '#1d3557']} style={styles.hero}>
+          <View style={styles.heroBrandRow}>
+            <Ionicons name="navigate-circle-outline" size={20} color={Theme.colors.white} />
+            <View>
+              <Text style={styles.heroBrandLabel}>Trips cockpit</Text>
+              <Text style={styles.heroBrandSub}>Plan, monitor, and archive safely</Text>
+            </View>
+          </View>
           <Text style={styles.heroTitle}>Your journeys</Text>
           <Text style={styles.heroSubtitle}>Keep routes, checklists, and risk intel organised per city.</Text>
           <View style={styles.heroMetaRow}>
@@ -42,7 +50,7 @@ const TripsScreen = () => {
           <AppButton title="Plan a trip" variant="ghost" onPress={() => router.push('/screens/PlanTrip')} style={styles.heroButton} />
         </LinearGradient>
 
-        <SectionHeader title="Current plans" subtitle="Auto-syncs with alerts and safe spots" />
+        <SectionHeader title="Current plans" subtitle="Auto-syncs with alerts and safe spots" icon="map-outline" />
         {activeTrips.length === 0 ? (
           <Card style={styles.emptyCard}>
             <Text style={styles.emptyText}>No planned trips. Add one to unlock hyperlocal intel.</Text>
@@ -81,7 +89,7 @@ const TripsScreen = () => {
           ))
         )}
 
-        <SectionHeader title="Past trips" subtitle="Tap to revisit notes & reports" />
+        <SectionHeader title="Past trips" subtitle="Tap to revisit notes & reports" icon="albums-outline" />
         {archivedTrips.length === 0 ? (
           <Card style={styles.emptyCard}>
             <Text style={styles.emptyText}>No archived trips yet.</Text>
@@ -117,6 +125,23 @@ const styles = StyleSheet.create({
     borderRadius: Theme.radius.lg,
     padding: Theme.spacing.lg,
     marginBottom: Theme.spacing.lg,
+  },
+  heroBrandRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Theme.spacing.sm,
+    marginBottom: Theme.spacing.sm,
+  },
+  heroBrandLabel: {
+    fontFamily: Theme.font.family.sansBold,
+    color: Theme.colors.white,
+    textTransform: 'uppercase',
+    fontSize: Theme.font.size.sm,
+  },
+  heroBrandSub: {
+    fontFamily: Theme.font.family.sans,
+    color: 'rgba(255,255,255,0.7)',
+    fontSize: Theme.font.size.xs,
   },
   heroTitle: {
     fontFamily: Theme.font.family.sansBold,
@@ -211,7 +236,7 @@ const styles = StyleSheet.create({
   },
 });
 
-const riskVariants: Record<'low' | 'medium' | 'high', number> = {
+const riskVariants: Record<'low' | 'medium' | 'high', StyleProp<ViewStyle>> = {
   low: styles.riskLow,
   medium: styles.riskMedium,
   high: styles.riskHigh,

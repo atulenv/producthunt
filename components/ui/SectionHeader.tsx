@@ -1,5 +1,6 @@
 import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, ViewStyle } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import { Theme } from '@/constants/theme';
 
 type Props = {
@@ -8,14 +9,26 @@ type Props = {
   actionLabel?: string;
   onActionPress?: () => void;
   style?: ViewStyle;
+  icon?: keyof typeof Ionicons.glyphMap;
 };
 
-const SectionHeader: React.FC<Props> = ({ title, subtitle, actionLabel, onActionPress, style }) => {
+const SectionHeader: React.FC<Props> = ({ title, subtitle, actionLabel, onActionPress, style, icon }) => {
+  const renderIndicator = () => {
+    if (icon) {
+      return (
+        <View style={styles.iconBubble}>
+          <Ionicons name={icon} size={16} color={Theme.colors.primary} />
+        </View>
+      );
+    }
+    return <View style={styles.pulse} />;
+  };
+
   return (
     <View style={[styles.container, style]}>
       <View style={styles.textBlock}>
         <View style={styles.titleWrap}>
-          <View style={styles.pulse} />
+          {renderIndicator()}
           <Text style={styles.title}>{title}</Text>
         </View>
         {subtitle ? <Text style={styles.subtitle}>{subtitle}</Text> : null}
@@ -37,6 +50,10 @@ const styles = StyleSheet.create({
     marginBottom: Theme.spacing.sm,
     flexWrap: 'wrap',
     gap: Theme.spacing.xs,
+    padding: Theme.spacing.sm,
+    borderWidth: 1,
+    borderColor: 'rgba(15,23,42,0.08)',
+    borderRadius: Theme.radius.lg,
   },
   textBlock: {
     flex: 1,
@@ -72,6 +89,14 @@ const styles = StyleSheet.create({
     height: 4,
     borderRadius: Theme.radius.full,
     backgroundColor: Theme.colors.accent,
+  },
+  iconBubble: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: 'rgba(85,99,255,0.12)',
+    justifyContent: 'center',
+    alignItems: 'center',
   },
 });
 

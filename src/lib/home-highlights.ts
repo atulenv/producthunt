@@ -69,7 +69,7 @@ export const CONCIERGE_ACTIONS: ConciergeAction[] = [
     title: 'Review essential docs',
     detail: 'Insurance PDF and embassy note are synced but not favorited.',
     actionLabel: 'View trips',
-    route: '/tabs/trips',
+    route: '/screens/Trips',
     tag: 'Readiness',
     icon: 'document-text-outline',
   },

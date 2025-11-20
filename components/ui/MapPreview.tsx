@@ -1,7 +1,15 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { Platform, StyleSheet, Text, View } from 'react-native';
-import MapView, { Circle, Marker, Region } from 'react-native-maps';
+import type { Region } from 'react-native-maps';
 import { Theme } from '@/constants/theme';
+
+type NativeMapModule = typeof import('react-native-maps');
+
+type NativeMapComponents = {
+  MapView: NativeMapModule['default'];
+  Circle: NativeMapModule['Circle'];
+  Marker: NativeMapModule['Marker'];
+};
 
 type MarkerConfig = {
   id: string;
@@ -25,7 +33,33 @@ type Props = {
 };
 
 const MapPreview: React.FC<Props> = ({ region, markers = [], circles = [], height = 220 }) => {
-  if (Platform.OS === 'web') {
+  const [nativeMaps, setNativeMaps] = useState<NativeMapComponents | null>(null);
+
+  useEffect(() => {
+    let isMounted = true;
+
+    if (Platform.OS !== 'web') {
+      import('react-native-maps')
+        .then((module) => {
+          if (isMounted) {
+            setNativeMaps({
+              MapView: module.default,
+              Circle: module.Circle,
+              Marker: module.Marker,
+            });
+          }
+        })
+        .catch((error) => {
+          console.warn('Failed to load native map module', error);
+        });
+    }
+
+    return () => {
+      isMounted = false;
+    };
+  }, []);
+
+  if (Platform.OS === 'web' || !nativeMaps) {
     return (
       <View style={[styles.webFallback, { height }]}>
         <Text style={styles.webTitle}>Map preview</Text>
@@ -33,6 +67,8 @@ const MapPreview: React.FC<Props> = ({ region, markers = [], circles = [], heigh
       </View>
     );
   }
+
+  const { MapView, Circle, Marker } = nativeMaps;
 
   return (
     <View style={[styles.nativeWrapper, { height }]}>

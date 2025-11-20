@@ -1,9 +1,11 @@
 // UI Revamp – immersive traveler profile with itinerary + suggestions.
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
-import React from 'react';
+import React, { useMemo, useState } from 'react';
+import { LinearGradient } from 'expo-linear-gradient';
 import { Alert, View, Text, StyleSheet, TouchableOpacity, ScrollView, TextInput } from 'react-native';
 import { Theme } from '../../constants/theme';
+import { TAB_BAR_OVERLAY_HEIGHT } from '../../constants/layout';
 import { useAppStore } from '../../src/store/use-app-store';
 import Screen from '../../components/ui/Screen';
 import Card from '../../components/ui/Card';
@@ -12,11 +14,46 @@ import AppButton from '../../components/ui/AppButton';
 import { PREPAREDNESS } from '../../src/lib/safety-data';
 import { useTranslate } from '../../src/hooks/use-translate';
 import { Collapsible } from '../../components/ui/collapsible';
+import ProgressBar from '../../components/ui/ProgressBar';
+
+type DetailFieldConfig = {
+  label: string;
+  value: string;
+  onChange: (text: string) => void;
+  props?: Partial<React.ComponentProps<typeof TextInput>>;
+  fullWidth?: boolean;
+};
 
 const UserProfileScreen = () => {
   const router = useRouter();
   const t = useTranslate();
   const { userProfile, trustedContacts, incidentReports, savedPlaces, trips, language, updateUserProfile } = useAppStore();
+  const [personaModules, setPersonaModules] = useState([
+    {
+      id: 'bio',
+      label: 'Add a travel bio',
+      detail: '30-sec story helps the concierge introduce you to responders.',
+      completed: true,
+    },
+    {
+      id: 'safe-word',
+      label: 'Set safe word',
+      detail: 'Used when you call SOS to verify identity.',
+      completed: false,
+    },
+    {
+      id: 'docs',
+      label: 'Upload visa copies',
+      detail: 'Keeps embassy desk ready with your files.',
+      completed: false,
+    },
+    {
+      id: 'alerts',
+      label: 'Curate alert focus',
+      detail: 'Choose topics that ping you first.',
+      completed: false,
+    },
+  ]);
 
   const stats = [
     { label: 'Trips planned', value: trips.length },
@@ -29,207 +66,377 @@ const UserProfileScreen = () => {
   )[0];
 
   const checklistPreview = upcomingTrip?.checklist.slice(0, 4) ?? [];
-
-  const renderDetailField = (
-    label: string,
-    value: string,
-    onChangeText: (text: string) => void,
-    props?: Partial<React.ComponentProps<typeof TextInput>>
-  ) => (
-    <View style={styles.detailField} key={label}>
-      <Text style={styles.detailLabel}>{label}</Text>
-      <TextInput
-        style={[styles.detailInput, props?.multiline && styles.detailInputMultiline]}
-        placeholder={`Enter ${label.toLowerCase()}`}
-        placeholderTextColor={Theme.colors.subtleText}
-        value={value}
-        onChangeText={onChangeText}
-        {...props}
-      />
-    </View>
+  const moduleProgress = useMemo(() => {
+    const complete = personaModules.filter((module) => module.completed).length;
+    return personaModules.length === 0 ? 0 : complete / personaModules.length;
+  }, [personaModules]);
+  const toggleModule = (id: string) => {
+    setPersonaModules((prev) =>
+      prev.map((module) => (module.id === id ? { ...module, completed: !module.completed } : module))
+    );
+  };
+  const timelineEntries = useMemo(
+    () =>
+      [...trips]
+        .sort((a, b) => new Date(b.startDate).getTime() - new Date(a.startDate).getTime())
+        .slice(0, 3),
+    [trips]
   );
 
+  const renderDetailField = ({ label, value, onChange, props, fullWidth }: DetailFieldConfig, forceFullWidth = false) => {
+    const stretch = forceFullWidth || fullWidth || props?.multiline;
+    return (
+      <View style={[styles.detailField, stretch && styles.detailFieldFull]} key={label}>
+        <Text style={styles.detailLabel}>{label}</Text>
+        <TextInput
+          style={[styles.detailInput, props?.multiline && styles.detailInputMultiline]}
+          placeholder={`Enter ${label.toLowerCase()}`}
+          placeholderTextColor={Theme.colors.subtleText}
+          value={value}
+          onChangeText={onChange}
+          {...props}
+        />
+      </View>
+    );
+  };
+
+  const personalRows: DetailFieldConfig[][] = [
+    [
+      { label: 'Home base', value: userProfile.homeBase, onChange: (text) => updateUserProfile({ homeBase: text }) },
+      { label: 'Date of birth', value: userProfile.dateOfBirth, onChange: (text) => updateUserProfile({ dateOfBirth: text }) },
+    ],
+    [
+      { label: 'Gender', value: userProfile.gender, onChange: (text) => updateUserProfile({ gender: text }) },
+      { label: 'Pronouns', value: userProfile.pronouns, onChange: (text) => updateUserProfile({ pronouns: text }) },
+    ],
+    [
+      { label: 'Nationality', value: userProfile.nationality, onChange: (text) => updateUserProfile({ nationality: text }) },
+      { label: 'Passport number', value: userProfile.passportNumber, onChange: (text) => updateUserProfile({ passportNumber: text }) },
+    ],
+    [
+      {
+        label: 'National ID',
+        value: userProfile.nationalId,
+        onChange: (text) => updateUserProfile({ nationalId: text }),
+      },
+      {
+        label: 'Document expiry',
+        value: userProfile.travelDocumentExpiry,
+        onChange: (text) => updateUserProfile({ travelDocumentExpiry: text }),
+      },
+    ],
+    [
+      { label: 'Email', value: userProfile.email, onChange: (text) => updateUserProfile({ email: text }) },
+      { label: 'Phone', value: userProfile.phone, onChange: (text) => updateUserProfile({ phone: text }) },
+    ],
+    [
+      { label: 'Alternate phone', value: userProfile.alternatePhone, onChange: (text) => updateUserProfile({ alternatePhone: text }) },
+    ],
+    [
+      {
+        label: 'Languages spoken',
+        value: userProfile.languagesSpoken,
+        onChange: (text) => updateUserProfile({ languagesSpoken: text }),
+        props: { multiline: true },
+      },
+    ],
+  ];
+
+  const emergencyRows: DetailFieldConfig[][] = [
+    [
+      {
+        label: 'Primary contact name',
+        value: userProfile.emergencyContact.name,
+        onChange: (text) => updateUserProfile({ emergencyContact: { name: text } }),
+      },
+      {
+        label: 'Relationship',
+        value: userProfile.emergencyContact.relation,
+        onChange: (text) => updateUserProfile({ emergencyContact: { relation: text } }),
+      },
+    ],
+    [
+      {
+        label: 'Contact phone',
+        value: userProfile.emergencyContact.phone,
+        onChange: (text) => updateUserProfile({ emergencyContact: { phone: text } }),
+      },
+      {
+        label: 'Contact email',
+        value: userProfile.emergencyContact.email,
+        onChange: (text) => updateUserProfile({ emergencyContact: { email: text } }),
+      },
+    ],
+    [
+      {
+        label: 'Contact address',
+        value: userProfile.emergencyContact.address,
+        onChange: (text) => updateUserProfile({ emergencyContact: { address: text } }),
+        props: { multiline: true },
+      },
+    ],
+  ];
+
+  const medicalRows: DetailFieldConfig[][] = [
+    [
+      {
+        label: 'Blood type',
+        value: userProfile.medicalInfo.bloodType,
+        onChange: (text) => updateUserProfile({ medicalInfo: { bloodType: text } }),
+      },
+      {
+        label: 'Insurance provider',
+        value: userProfile.medicalInfo.insuranceProvider,
+        onChange: (text) => updateUserProfile({ medicalInfo: { insuranceProvider: text } }),
+      },
+    ],
+    [
+      {
+        label: 'Policy number',
+        value: userProfile.medicalInfo.insurancePolicy,
+        onChange: (text) => updateUserProfile({ medicalInfo: { insurancePolicy: text } }),
+      },
+      {
+        label: 'Physician contact',
+        value: userProfile.medicalInfo.physicianContact,
+        onChange: (text) => updateUserProfile({ medicalInfo: { physicianContact: text } }),
+      },
+    ],
+    [
+      {
+        label: 'Allergies',
+        value: userProfile.medicalInfo.allergies,
+        onChange: (text) => updateUserProfile({ medicalInfo: { allergies: text } }),
+        props: { multiline: true },
+      },
+      {
+        label: 'Medications',
+        value: userProfile.medicalInfo.medications,
+        onChange: (text) => updateUserProfile({ medicalInfo: { medications: text } }),
+        props: { multiline: true },
+      },
+    ],
+    [
+      {
+        label: 'Medical notes',
+        value: userProfile.medicalInfo.medicalNotes,
+        onChange: (text) => updateUserProfile({ medicalInfo: { medicalNotes: text } }),
+        props: { multiline: true },
+      },
+    ],
+  ];
+
+  const travelRows: DetailFieldConfig[][] = [
+    [
+      {
+        label: 'Travel style',
+        value: userProfile.travelPreferences.travelStyle,
+        onChange: (text) => updateUserProfile({ travelPreferences: { travelStyle: text } }),
+        props: { multiline: true },
+      },
+    ],
+    [
+      {
+        label: 'Accommodation',
+        value: userProfile.travelPreferences.accommodation,
+        onChange: (text) => updateUserProfile({ travelPreferences: { accommodation: text } }),
+      },
+      {
+        label: 'Preferred transport',
+        value: userProfile.travelPreferences.transport,
+        onChange: (text) => updateUserProfile({ travelPreferences: { transport: text } }),
+      },
+    ],
+    [
+      {
+        label: 'Dietary notes',
+        value: userProfile.travelPreferences.dietary,
+        onChange: (text) => updateUserProfile({ travelPreferences: { dietary: text } }),
+      },
+      {
+        label: 'Mobility needs',
+        value: userProfile.travelPreferences.mobilityNeeds,
+        onChange: (text) => updateUserProfile({ travelPreferences: { mobilityNeeds: text } }),
+      },
+    ],
+    [
+      {
+        label: 'Preferred communication',
+        value: userProfile.travelPreferences.communication,
+        onChange: (text) => updateUserProfile({ travelPreferences: { communication: text } }),
+        props: { multiline: true },
+      },
+      {
+        label: 'Verification notes',
+        value: userProfile.verificationNotes,
+        onChange: (text) => updateUserProfile({ verificationNotes: text }),
+        props: { multiline: true },
+      },
+    ],
+  ];
+
+  const securityRows: DetailFieldConfig[][] = [
+    [
+      { label: 'Safe word', value: userProfile.safeWord, onChange: (text) => updateUserProfile({ safeWord: text }) },
+      { label: 'Arrival flight', value: userProfile.arrivalFlight, onChange: (text) => updateUserProfile({ arrivalFlight: text }) },
+    ],
+    [
+      { label: 'Departure flight', value: userProfile.departureFlight, onChange: (text) => updateUserProfile({ departureFlight: text }) },
+      {
+        label: 'Employer / work contact',
+        value: userProfile.employerContact,
+        onChange: (text) => updateUserProfile({ employerContact: text }),
+        props: { multiline: true },
+      },
+    ],
+    [
+      {
+        label: 'Embassy desk',
+        value: userProfile.embassyContact,
+        onChange: (text) => updateUserProfile({ embassyContact: text }),
+        props: { multiline: true },
+      },
+    ],
+    [
+      {
+        label: 'Local stay address',
+        value: userProfile.localStayAddress,
+        onChange: (text) => updateUserProfile({ localStayAddress: text }),
+        props: { multiline: true },
+      },
+      {
+        label: 'Host / concierge contact',
+        value: userProfile.localHostName,
+        onChange: (text) => updateUserProfile({ localHostName: text }),
+        props: { multiline: true },
+      },
+    ],
+    [
+      {
+        label: 'Social handles',
+        value: userProfile.socialHandle,
+        onChange: (text) => updateUserProfile({ socialHandle: text }),
+        props: { multiline: true },
+      },
+    ],
+  ];
+
   return (
-    <Screen style={styles.screen}>
+    <Screen style={styles.screen} footerInset={TAB_BAR_OVERLAY_HEIGHT / 2}>
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
         <Card style={styles.identityCard}>
-          <SectionHeader title={t('profile.identity')} subtitle={userProfile.tagline} />
-          <View style={styles.profileRow}>
-            <View style={styles.avatar}>
-              <Text style={styles.avatarInitial}>{userProfile.name.charAt(0)}</Text>
+          <LinearGradient colors={['#312e81', '#5b21b6', '#db2777']} style={styles.identityGradient}>
+            <View style={styles.identityHeroRow}>
+              <View style={{ flex: 1 }}>
+                <Text style={styles.identityEyebrow}>{t('profile.identity')}</Text>
+                <Text style={styles.identityName}>{userProfile.name}</Text>
+                <Text style={styles.identityTagline}>{userProfile.tagline}</Text>
+              </View>
+              <View style={styles.heroAvatar}>
+                <Text style={styles.heroAvatarInitial}>{userProfile.name.charAt(0)}</Text>
+              </View>
             </View>
-            <View style={{ flex: 1 }}>
-              <Text style={styles.profileName}>{userProfile.name}</Text>
+            <View style={styles.heroStatsRow}>
+              {stats.map((stat) => (
+                <View key={stat.label} style={styles.heroStatBlock}>
+                  <Text style={styles.heroStatValue}>{stat.value}</Text>
+                  <Text style={styles.heroStatLabel}>{stat.label}</Text>
+                </View>
+              ))}
+            </View>
+            <TouchableOpacity style={styles.heroEditButton} onPress={() => router.push('/screens/Settings')}>
+              <Ionicons name="settings-outline" size={16} color={Theme.colors.white} />
+              <Text style={styles.heroEditText}>Customize</Text>
+            </TouchableOpacity>
+          </LinearGradient>
+          <View style={styles.identityBody}>
+            <View style={styles.identityBodyRow}>
               <Text style={styles.profileMeta}>Language: {language.toUpperCase()}</Text>
               <Text style={styles.profileMeta}>Membership: Sapphire Concierge</Text>
               <Text style={styles.profileMeta}>Reports logged: {incidentReports.length}</Text>
             </View>
-            <TouchableOpacity style={styles.editButton} onPress={() => router.push('/tabs/settings')}>
-              <Ionicons name="create-outline" size={18} color={Theme.colors.primary} />
-              <Text style={styles.editButtonText}>Edit</Text>
-            </TouchableOpacity>
-          </View>
-          <View style={styles.badgeRow}>
-            <View style={styles.badge}>
-              <Ionicons name="shield-checkmark" size={18} color={Theme.colors.primary} />
-              <Text style={styles.badgeText}>Verified ID</Text>
-            </View>
-            <View style={styles.badge}>
-              <Ionicons name="leaf-outline" size={18} color={Theme.colors.secondary} />
-              <Text style={styles.badgeText}>{t('profile.badges')}</Text>
-            </View>
-          </View>
-          <View style={styles.statsRow}>
-            {stats.map((stat) => (
-              <View key={stat.label} style={styles.statBlock}>
-                <Text style={styles.statValue}>{stat.value}</Text>
-                <Text style={styles.statLabel}>{stat.label}</Text>
+            <View style={styles.badgeRow}>
+              <View style={styles.badge}>
+                <Ionicons name="shield-checkmark" size={18} color={Theme.colors.primary} />
+                <Text style={styles.badgeText}>Verified ID</Text>
               </View>
-            ))}
+              <View style={styles.badge}>
+                <Ionicons name="leaf-outline" size={18} color={Theme.colors.secondary} />
+                <Text style={styles.badgeText}>{t('profile.badges')}</Text>
+              </View>
+            </View>
           </View>
+        </Card>
+
+        <Card style={styles.builderCard}>
+          <SectionHeader title="Profile builder" subtitle="Complete your security dossier" icon="finger-print-outline" />
+          <View style={styles.builderProgressRow}>
+            <ProgressBar progress={moduleProgress} />
+            <Text style={styles.builderProgressValue}>{Math.round(moduleProgress * 100)}%</Text>
+          </View>
+          {personaModules.map((module) => (
+            <TouchableOpacity key={module.id} style={styles.moduleRow} onPress={() => toggleModule(module.id)}>
+              <Ionicons
+                name={module.completed ? 'checkmark-circle' : 'ellipse-outline'}
+                size={20}
+                color={module.completed ? Theme.colors.success : Theme.colors.subtleText}
+              />
+              <View style={{ flex: 1 }}>
+                <Text style={styles.moduleLabel}>{module.label}</Text>
+                <Text style={styles.moduleDetail}>{module.detail}</Text>
+              </View>
+              <Ionicons name="chevron-forward" size={18} color={Theme.colors.subtleText} />
+            </TouchableOpacity>
+          ))}
+          <Text style={styles.moduleHint}>Tap an item whenever you finish that piece of the profile builder.</Text>
         </Card>
 
         <Card style={styles.detailCard}>
           <SectionHeader title="Traveler dossier" subtitle="Tap to expand sections" />
           <Collapsible title={t('profile.personalDetails')}>
-            <View style={styles.detailGrid}>
-              {renderDetailField('Home base', userProfile.homeBase, (text) => updateUserProfile({ homeBase: text }))}
-              {renderDetailField('Date of birth', userProfile.dateOfBirth, (text) => updateUserProfile({ dateOfBirth: text }))}
-            </View>
-            <View style={styles.detailGrid}>
-              {renderDetailField('Gender', userProfile.gender, (text) => updateUserProfile({ gender: text }))}
-              {renderDetailField('Pronouns', userProfile.pronouns, (text) => updateUserProfile({ pronouns: text }))}
-            </View>
-            <View style={styles.detailGrid}>
-              {renderDetailField('Nationality', userProfile.nationality, (text) => updateUserProfile({ nationality: text }))}
-              {renderDetailField('Passport number', userProfile.passportNumber, (text) => updateUserProfile({ passportNumber: text }))}
-            </View>
-            {renderDetailField('Document expiry', userProfile.travelDocumentExpiry, (text) => updateUserProfile({ travelDocumentExpiry: text }))}
-            <View style={styles.detailGrid}>
-              {renderDetailField('Email', userProfile.email, (text) => updateUserProfile({ email: text }))}
-              {renderDetailField('Phone', userProfile.phone, (text) => updateUserProfile({ phone: text }))}
-            </View>
-            {renderDetailField('Languages spoken', userProfile.languagesSpoken, (text) => updateUserProfile({ languagesSpoken: text }))}
-          </Collapsible>
+            <View style={styles.dossierSection}>
+              {personalRows.map((row, rowIndex) => (
+                <View key={`personal-${rowIndex}`} style={styles.detailGrid}>
+                {row.map((field) => renderDetailField(field, row.length === 1))}
+              </View>
+            ))}
+          </View>
+        </Collapsible>
 
           <Collapsible title={t('profile.emergencyDetails')}>
-            <View style={styles.detailGrid}>
-              {renderDetailField(
-                'Primary contact name',
-                userProfile.emergencyContact.name,
-                (text) => updateUserProfile({ emergencyContact: { name: text } })
-              )}
-              {renderDetailField(
-                'Relationship',
-                userProfile.emergencyContact.relation,
-                (text) => updateUserProfile({ emergencyContact: { relation: text } })
-              )}
+            <View style={styles.dossierSection}>
+              {emergencyRows.map((row, rowIndex) => (
+                <View key={`emergency-${rowIndex}`} style={styles.detailGrid}>
+                {row.map((field) => renderDetailField(field, row.length === 1))}
+              </View>
+            ))}
+            <View style={styles.dossierDivider} />
+            {medicalRows.map((row, rowIndex) => (
+              <View key={`medical-${rowIndex}`} style={styles.detailGrid}>
+                {row.map((field) => renderDetailField(field, row.length === 1))}
+              </View>
+            ))}
             </View>
-            <View style={styles.detailGrid}>
-              {renderDetailField(
-                'Contact phone',
-                userProfile.emergencyContact.phone,
-                (text) => updateUserProfile({ emergencyContact: { phone: text } })
-              )}
-              {renderDetailField(
-                'Contact email',
-                userProfile.emergencyContact.email,
-                (text) => updateUserProfile({ emergencyContact: { email: text } })
-              )}
+          </Collapsible>
+
+          <Collapsible title="Security & logistics">
+            <View style={styles.dossierSection}>
+              {securityRows.map((row, rowIndex) => (
+                <View key={`security-${rowIndex}`} style={styles.detailGrid}>
+                  {row.map((field) => renderDetailField(field, row.length === 1))}
+                </View>
+              ))}
             </View>
-            {renderDetailField(
-              'Contact address',
-              userProfile.emergencyContact.address,
-              (text) => updateUserProfile({ emergencyContact: { address: text } }),
-              { multiline: true }
-            )}
-            <View style={styles.detailGrid}>
-              {renderDetailField(
-                'Blood type',
-                userProfile.medicalInfo.bloodType,
-                (text) => updateUserProfile({ medicalInfo: { bloodType: text } })
-              )}
-              {renderDetailField(
-                'Insurance provider',
-                userProfile.medicalInfo.insuranceProvider,
-                (text) => updateUserProfile({ medicalInfo: { insuranceProvider: text } })
-              )}
-            </View>
-            <View style={styles.detailGrid}>
-              {renderDetailField(
-                'Policy number',
-                userProfile.medicalInfo.insurancePolicy,
-                (text) => updateUserProfile({ medicalInfo: { insurancePolicy: text } })
-              )}
-              {renderDetailField(
-                'Physician contact',
-                userProfile.medicalInfo.physicianContact,
-                (text) => updateUserProfile({ medicalInfo: { physicianContact: text } })
-              )}
-            </View>
-            {renderDetailField(
-              'Allergies',
-              userProfile.medicalInfo.allergies,
-              (text) => updateUserProfile({ medicalInfo: { allergies: text } }),
-              { multiline: true }
-            )}
-            {renderDetailField(
-              'Medications',
-              userProfile.medicalInfo.medications,
-              (text) => updateUserProfile({ medicalInfo: { medications: text } }),
-              { multiline: true }
-            )}
-            {renderDetailField(
-              'Medical notes',
-              userProfile.medicalInfo.medicalNotes,
-              (text) => updateUserProfile({ medicalInfo: { medicalNotes: text } }),
-              { multiline: true }
-            )}
           </Collapsible>
 
           <Collapsible title={t('profile.travelPreferences')}>
-            {renderDetailField(
-              'Travel style',
-              userProfile.travelPreferences.travelStyle,
-              (text) => updateUserProfile({ travelPreferences: { travelStyle: text } }),
-              { multiline: true }
-            )}
-            <View style={styles.detailGrid}>
-              {renderDetailField(
-                'Accommodation',
-                userProfile.travelPreferences.accommodation,
-                (text) => updateUserProfile({ travelPreferences: { accommodation: text } })
-              )}
-              {renderDetailField(
-                'Preferred transport',
-                userProfile.travelPreferences.transport,
-                (text) => updateUserProfile({ travelPreferences: { transport: text } })
-              )}
+            <View style={styles.dossierSection}>
+              {travelRows.map((row, rowIndex) => (
+                <View key={`travel-${rowIndex}`} style={styles.detailGrid}>
+                {row.map((field) => renderDetailField(field, row.length === 1))}
+              </View>
+            ))}
             </View>
-            <View style={styles.detailGrid}>
-              {renderDetailField(
-                'Dietary notes',
-                userProfile.travelPreferences.dietary,
-                (text) => updateUserProfile({ travelPreferences: { dietary: text } })
-              )}
-              {renderDetailField(
-                'Mobility needs',
-                userProfile.travelPreferences.mobilityNeeds,
-                (text) => updateUserProfile({ travelPreferences: { mobilityNeeds: text } })
-              )}
-            </View>
-            {renderDetailField(
-              'Preferred communication',
-              userProfile.travelPreferences.communication,
-              (text) => updateUserProfile({ travelPreferences: { communication: text } }),
-              { multiline: true }
-            )}
-            {renderDetailField(
-              'Verification notes',
-              userProfile.verificationNotes,
-              (text) => updateUserProfile({ verificationNotes: text }),
-              { multiline: true }
-            )}
           </Collapsible>
         </Card>
 
@@ -273,7 +480,7 @@ const UserProfileScreen = () => {
               <AppButton
                 title="View full itinerary"
                 variant="ghost"
-                onPress={() => router.push('/tabs/trips')}
+                onPress={() => router.push('/screens/Trips')}
                 textStyle={{ color: Theme.colors.primary }}
               />
             </>
@@ -283,6 +490,35 @@ const UserProfileScreen = () => {
               <AppButton title="Plan a trip" onPress={() => router.push('/screens/PlanTrip')} />
             </View>
           )}
+        </Card>
+
+        <Card style={styles.historyCard}>
+          <SectionHeader title="Travel timeline" subtitle="Recent missions with risk context" icon="time-outline" />
+          {timelineEntries.length === 0 ? (
+            <Text style={styles.historyEmpty}>Add a trip and we will visualise your journey here.</Text>
+          ) : (
+            timelineEntries.map((entry, index) => (
+              <View key={entry.id} style={styles.historyRow}>
+                <View style={styles.historyMarkerColumn}>
+                  <View style={styles.historyMarker} />
+                  {index !== timelineEntries.length - 1 ? <View style={styles.historyLine} /> : null}
+                </View>
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.historyCity}>{entry.city}</Text>
+                  <Text style={styles.historyDates}>
+                    {entry.startDate} → {entry.endDate}
+                  </Text>
+                </View>
+                <View style={[styles.historyBadge, styles[`risk${entry.riskLevel}` as const]]}>
+                  <Text style={styles.historyBadgeText}>{entry.riskLevel.toUpperCase()}</Text>
+                </View>
+              </View>
+            ))
+          )}
+          <TouchableOpacity style={styles.historyLink} onPress={() => router.push('/screens/Trips')}>
+            <Text style={styles.historyLinkText}>Open Trips hub</Text>
+            <Ionicons name="chevron-forward" size={18} color={Theme.colors.primary} />
+          </TouchableOpacity>
         </Card>
 
         <Card style={styles.documentsCard}>
@@ -314,11 +550,11 @@ const UserProfileScreen = () => {
         <Card style={styles.identityCard}>
           <SectionHeader title="Quick links" subtitle="Jump to other sections" />
           <View style={styles.quickGrid}>
-            <TouchableOpacity style={styles.quickLink} onPress={() => router.push('/tabs/settings')}>
+            <TouchableOpacity style={styles.quickLink} onPress={() => router.push('/screens/Settings')}>
               <Ionicons name="settings-outline" size={20} color={Theme.colors.primary} />
               <Text style={styles.quickText}>Settings</Text>
             </TouchableOpacity>
-            <TouchableOpacity style={styles.quickLink} onPress={() => router.push('/tabs/trips')}>
+            <TouchableOpacity style={styles.quickLink} onPress={() => router.push('/screens/Trips')}>
               <Ionicons name="map-outline" size={20} color={Theme.colors.primary} />
               <Text style={styles.quickText}>Trips</Text>
             </TouchableOpacity>
@@ -343,17 +579,162 @@ const styles = StyleSheet.create({
   },
   identityCard: {
     gap: Theme.spacing.md,
+    padding: 0,
+    overflow: 'hidden',
+  },
+  identityGradient: {
+    padding: Theme.spacing.lg,
+    gap: Theme.spacing.lg,
+  },
+  identityHeroRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Theme.spacing.md,
+  },
+  identityEyebrow: {
+    color: 'rgba(255,255,255,0.8)',
+    textTransform: 'uppercase',
+    letterSpacing: 1,
+    fontSize: Theme.font.size.xs,
+    fontFamily: Theme.font.family.sansBold,
+  },
+  identityName: {
+    color: Theme.colors.white,
+    fontFamily: Theme.font.family.sansBold,
+    fontSize: Theme.font.size['2xl'],
+  },
+  identityTagline: {
+    color: 'rgba(255,255,255,0.85)',
+    fontFamily: Theme.font.family.sans,
+    marginTop: 4,
+  },
+  heroAvatar: {
+    width: 72,
+    height: 72,
+    borderRadius: 36,
+    backgroundColor: 'rgba(255,255,255,0.12)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.4)',
+  },
+  heroAvatarInitial: {
+    fontSize: Theme.font.size.xl,
+    color: Theme.colors.white,
+    fontFamily: Theme.font.family.sansBold,
+  },
+  heroStatsRow: {
+    flexDirection: 'row',
+    gap: Theme.spacing.sm,
+    flexWrap: 'wrap',
+  },
+  heroStatBlock: {
+    flex: 1,
+    minWidth: 120,
+    borderRadius: Theme.radius.lg,
+    padding: Theme.spacing.sm,
+    backgroundColor: 'rgba(255,255,255,0.12)',
+  },
+  heroStatValue: {
+    fontFamily: Theme.font.family.sansBold,
+    color: Theme.colors.white,
+    fontSize: Theme.font.size.lg,
+  },
+  heroStatLabel: {
+    fontFamily: Theme.font.family.sans,
+    color: 'rgba(255,255,255,0.75)',
+    fontSize: Theme.font.size.xs,
+  },
+  heroEditButton: {
+    alignSelf: 'flex-start',
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingHorizontal: Theme.spacing.md,
+    paddingVertical: 6,
+    borderRadius: Theme.radius.full,
+    backgroundColor: 'rgba(255,255,255,0.18)',
+  },
+  heroEditText: {
+    fontFamily: Theme.font.family.sansBold,
+    color: Theme.colors.white,
+  },
+  identityBody: {
+    padding: Theme.spacing.md,
+    gap: Theme.spacing.sm,
+  },
+  identityBodyRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: Theme.spacing.sm,
+    justifyContent: 'space-between',
+  },
+  builderCard: {
+    gap: Theme.spacing.md,
+  },
+  builderProgressRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Theme.spacing.sm,
+  },
+  builderProgressValue: {
+    fontFamily: Theme.font.family.sansBold,
+    color: Theme.colors.text,
+  },
+  moduleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Theme.spacing.sm,
+    paddingVertical: Theme.spacing.xs,
+  },
+  moduleLabel: {
+    fontFamily: Theme.font.family.sansBold,
+    color: Theme.colors.text,
+  },
+  moduleDetail: {
+    fontFamily: Theme.font.family.sans,
+    color: Theme.colors.subtleText,
+    fontSize: Theme.font.size.sm,
+  },
+  moduleHint: {
+    fontFamily: Theme.font.family.sans,
+    color: Theme.colors.subtleText,
+    fontSize: Theme.font.size.xs,
   },
   detailCard: {
     gap: Theme.spacing.md,
   },
+  dossierSection: {
+    gap: Theme.spacing.md,
+    backgroundColor: 'rgba(255,255,255,0.9)',
+    borderRadius: Theme.radius.lg,
+    borderWidth: 1,
+    borderColor: 'rgba(15,23,42,0.06)',
+    padding: Theme.spacing.md,
+  },
+  dossierDivider: {
+    height: 1,
+    backgroundColor: 'rgba(15,23,42,0.08)',
+  },
   detailGrid: {
     flexDirection: 'row',
     gap: Theme.spacing.md,
+    flexWrap: 'wrap',
+    justifyContent: 'space-between',
   },
   detailField: {
-    flex: 1,
+    flexGrow: 1,
     gap: Theme.spacing.xs,
+    backgroundColor: 'rgba(238,242,255,0.6)',
+    padding: Theme.spacing.sm,
+    borderRadius: Theme.radius.md,
+    borderWidth: 1,
+    borderColor: 'rgba(15,23,42,0.08)',
+    minWidth: '48%',
+  },
+  detailFieldFull: {
+    minWidth: '100%',
+    flexBasis: '100%',
   },
   detailLabel: {
     fontFamily: Theme.font.family.sansBold,
@@ -363,59 +744,21 @@ const styles = StyleSheet.create({
   },
   detailInput: {
     borderRadius: Theme.radius.md,
-    borderWidth: 1,
-    borderColor: 'rgba(15,23,42,0.08)',
-    paddingHorizontal: Theme.spacing.md,
-    paddingVertical: Theme.spacing.sm,
+    borderWidth: 0,
+    paddingHorizontal: 0,
+    paddingVertical: 0,
     fontFamily: Theme.font.family.sans,
     color: Theme.colors.text,
-    minHeight: 46,
+    minHeight: 40,
   },
   detailInputMultiline: {
     minHeight: 72,
     textAlignVertical: 'top',
   },
-  profileRow: {
-    flexDirection: 'row',
-    gap: Theme.spacing.md,
-    alignItems: 'center',
-  },
-  avatar: {
-    width: 72,
-    height: 72,
-    borderRadius: 36,
-    backgroundColor: Theme.colors.primary,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  avatarInitial: {
-    fontSize: Theme.font.size.xl,
-    color: Theme.colors.white,
-    fontFamily: Theme.font.family.sansBold,
-  },
-  profileName: {
-    fontFamily: Theme.font.family.sansBold,
-    fontSize: Theme.font.size.lg,
-    color: Theme.colors.text,
-  },
   profileMeta: {
     fontFamily: Theme.font.family.sans,
     color: Theme.colors.subtleText,
     fontSize: Theme.font.size.sm,
-  },
-  editButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-    paddingHorizontal: Theme.spacing.sm,
-    paddingVertical: 4,
-    borderRadius: Theme.radius.full,
-    borderWidth: 1,
-    borderColor: Theme.colors.primary,
-  },
-  editButtonText: {
-    fontFamily: Theme.font.family.sansBold,
-    color: Theme.colors.primary,
   },
   badgeRow: {
     flexDirection: 'row',
@@ -435,26 +778,63 @@ const styles = StyleSheet.create({
     color: Theme.colors.primary,
     fontSize: Theme.font.size.sm,
   },
-  statsRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
+  itineraryCard: {
+    gap: Theme.spacing.md,
   },
-  statBlock: {
-    flex: 1,
+  historyCard: {
+    gap: Theme.spacing.md,
+  },
+  historyEmpty: {
+    fontFamily: Theme.font.family.sans,
+    color: Theme.colors.subtleText,
+  },
+  historyRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Theme.spacing.md,
+  },
+  historyMarkerColumn: {
     alignItems: 'center',
   },
-  statValue: {
+  historyMarker: {
+    width: 12,
+    height: 12,
+    borderRadius: 6,
+    backgroundColor: Theme.colors.primary,
+  },
+  historyLine: {
+    flex: 1,
+    width: 2,
+    backgroundColor: 'rgba(15,23,42,0.12)',
+    marginTop: 2,
+  },
+  historyCity: {
     fontFamily: Theme.font.family.sansBold,
-    fontSize: Theme.font.size.lg,
     color: Theme.colors.text,
   },
-  statLabel: {
+  historyDates: {
     fontFamily: Theme.font.family.sans,
     color: Theme.colors.subtleText,
     fontSize: Theme.font.size.sm,
   },
-  itineraryCard: {
-    gap: Theme.spacing.md,
+  historyBadge: {
+    paddingHorizontal: Theme.spacing.sm,
+    paddingVertical: Theme.spacing.xs,
+    borderRadius: Theme.radius.full,
+  },
+  historyBadgeText: {
+    fontFamily: Theme.font.family.sansBold,
+    color: Theme.colors.text,
+  },
+  historyLink: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'flex-end',
+    gap: Theme.spacing.xs,
+  },
+  historyLinkText: {
+    fontFamily: Theme.font.family.sansBold,
+    color: Theme.colors.primary,
   },
   itineraryHeader: {
     flexDirection: 'row',

@@ -71,10 +71,20 @@ type UserProfile = {
   pronouns: string;
   nationality: string;
   passportNumber: string;
+  nationalId: string;
   travelDocumentExpiry: string;
   email: string;
   phone: string;
+  alternatePhone: string;
   languagesSpoken: string;
+  safeWord: string;
+  embassyContact: string;
+  localStayAddress: string;
+  localHostName: string;
+  arrivalFlight: string;
+  departureFlight: string;
+  employerContact: string;
+  socialHandle: string;
   emergencyContact: EmergencyContact;
   medicalInfo: MedicalInfo;
   travelPreferences: TravelPreferences;
@@ -114,7 +124,7 @@ export const useAppStore = create<AppState & AppActions>((set) => ({
   theme: 'light',
   language: 'en',
   userProfile: {
-    name: 'John Doe',
+    name: 'Atul Sahu',
     tagline: 'Solo traveler',
     homeBase: 'Seattle, USA',
     dateOfBirth: '14 Jan 1994',
@@ -122,10 +132,20 @@ export const useAppStore = create<AppState & AppActions>((set) => ({
     pronouns: 'He/Him',
     nationality: 'American',
     passportNumber: 'X1234567',
+    nationalId: 'SSN: ***-**-1234',
     travelDocumentExpiry: 'Jun 2030',
     email: 'john@example.com',
     phone: '+1 206-555-0123',
+    alternatePhone: '+91 98100 00000',
     languagesSpoken: 'English, Spanish',
+    safeWord: 'AURORA',
+    embassyContact: 'US Embassy New Delhi · +91 11 2419 8000',
+    localStayAddress: 'The Imperial Hotel, Janpath Rd',
+    localHostName: 'Front desk + concierge: +91 11 2334 1234',
+    arrivalFlight: 'AI 104 · ETA 22:15 · DEL T3',
+    departureFlight: 'BA 256 · ETD 02:10 · DEL T3',
+    employerContact: 'Manager: Sarah Lee · +1 206-555-0777',
+    socialHandle: '@atul-onroad',
     emergencyContact: {
       name: 'Maya Doe',
       relation: 'Sister',

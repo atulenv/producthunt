@@ -19,7 +19,13 @@ const SettingsScreen = () => {
   return (
     <Screen style={styles.screen}>
       <ScrollView showsVerticalScrollIndicator={false}>
-        {/* UI Revamp - Removed custom header, relying on tab navigator header */}
+        <View style={styles.hero}>
+          <View style={styles.heroBadge}>
+            <Ionicons name="settings-outline" size={18} color={Theme.colors.primary} />
+            <Text style={styles.heroBadgeText}>Control room</Text>
+          </View>
+          <Text style={styles.heroSubtitle}>{t('settings.multiLanguageLabel')}</Text>
+        </View>
 
         <View style={styles.sectionContainer}>
           <Text style={styles.sectionTitle}>{t('settings.display')}</Text>
@@ -80,6 +86,31 @@ const SettingsScreen = () => {
 const styles = StyleSheet.create({
   screen: {
     backgroundColor: Theme.colors.background,
+  },
+  hero: {
+    paddingHorizontal: Theme.spacing.md,
+    paddingBottom: Theme.spacing.md,
+    gap: Theme.spacing.xs,
+  },
+  heroBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    alignSelf: 'flex-start',
+    gap: Theme.spacing.xs,
+    paddingHorizontal: Theme.spacing.sm,
+    paddingVertical: 4,
+    borderRadius: Theme.radius.full,
+    backgroundColor: 'rgba(85,99,255,0.12)',
+  },
+  heroBadgeText: {
+    fontFamily: Theme.font.family.sansBold,
+    color: Theme.colors.primary,
+    fontSize: Theme.font.size.xs,
+    textTransform: 'uppercase',
+  },
+  heroSubtitle: {
+    fontFamily: Theme.font.family.sans,
+    color: Theme.colors.subtleText,
   },
   sectionContainer: {
     marginBottom: Theme.spacing.md,
