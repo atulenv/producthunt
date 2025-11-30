@@ -621,6 +621,47 @@ const styles = StyleSheet.create({
   map: {
     flex: 1,
   },
+  webMapPlaceholder: {
+    flex: 1,
+    backgroundColor: '#E8F4F8',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: Theme.spacing.xl,
+    gap: Theme.spacing.md,
+  },
+  webMapTitle: {
+    fontSize: Theme.font.size.xl,
+    fontWeight: '700',
+    color: Theme.colors.text,
+    textAlign: 'center',
+  },
+  webMapSubtitle: {
+    fontSize: Theme.font.size.md,
+    color: Theme.colors.subtleText,
+    textAlign: 'center',
+  },
+  webMapStats: {
+    flexDirection: 'row',
+    gap: Theme.spacing.lg,
+    marginTop: Theme.spacing.md,
+  },
+  webMapStat: {
+    alignItems: 'center',
+    backgroundColor: Theme.colors.white,
+    paddingHorizontal: Theme.spacing.lg,
+    paddingVertical: Theme.spacing.md,
+    borderRadius: Theme.radius.lg,
+    ...Theme.shadows.sm,
+  },
+  webMapStatValue: {
+    fontSize: Theme.font.size.xl,
+    fontWeight: '700',
+    color: Theme.colors.text,
+  },
+  webMapStatLabel: {
+    fontSize: Theme.font.size.sm,
+    color: Theme.colors.subtleText,
+  },
   marker: {
     width: 32,
     height: 32,
