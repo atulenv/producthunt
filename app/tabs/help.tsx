@@ -157,11 +157,11 @@ const HelpScreen = () => {
     setTimeout(() => {
       setMessages((prev) => {
         const updated = prev.map((message) =>
-          message.id === userMessage.id ? { ...message, status: 'read' } : message
+          message.id === userMessage.id ? { ...message, status: 'read' as const } : message
         );
         return [
           ...updated,
-          { id: Date.now() + 1, text: replyText, sender: 'assistant', timestamp: createTimestamp(), status: 'read' },
+          { id: Date.now() + 1, text: replyText, sender: 'assistant' as const, timestamp: createTimestamp(), status: 'read' as const },
         ];
       });
       setIsTyping(false);
