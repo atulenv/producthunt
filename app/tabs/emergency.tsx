@@ -1,4 +1,4 @@
-import EmergencyScreen from '../screens/Emergency';
+import EmergencyScreen from '../screens/emergency';
 import { TAB_BAR_OVERLAY_HEIGHT } from '../../constants/layout';
 
 export default function Emergency() {
