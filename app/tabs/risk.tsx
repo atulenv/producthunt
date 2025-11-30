@@ -325,7 +325,6 @@ const RiskZoneMapScreen = () => {
           <TouchableOpacity style={styles.locationButton}>
             <Ionicons name="locate" size={22} color={Theme.colors.primary} />
           </TouchableOpacity>
-          </TouchableOpacity>
         </View>
 
         {/* Selected Zone Info */}
