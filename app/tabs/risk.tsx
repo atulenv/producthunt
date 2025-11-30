@@ -1,7 +1,6 @@
 // Enhanced Risk Zone Map with better visualization for India
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Dimensions, Platform, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
-import MapView, { Circle, Marker, PROVIDER_DEFAULT, Region } from 'react-native-maps';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import { Theme } from '../../constants/theme';
@@ -9,6 +8,20 @@ import { TAB_BAR_OVERLAY_HEIGHT } from '../../constants/layout';
 import { HEAT_LEGEND, RISK_ZONES, RiskCategory, RiskZone } from '../../src/lib/risk-heatmap';
 import Card from '../../components/ui/Card';
 import SectionHeader from '../../components/ui/SectionHeader';
+
+// Conditionally import map components for native only
+let MapView: any = null;
+let Circle: any = null;
+let Marker: any = null;
+let PROVIDER_DEFAULT: any = null;
+
+if (Platform.OS !== 'web') {
+  const Maps = require('react-native-maps');
+  MapView = Maps.default;
+  Circle = Maps.Circle;
+  Marker = Maps.Marker;
+  PROVIDER_DEFAULT = Maps.PROVIDER_DEFAULT;
+}
 
 type LiveRiskZone = RiskZone & { lastUpdate: string };
 
