@@ -1,45 +1,76 @@
-import { PropsWithChildren, useState } from 'react';
-import { StyleSheet, TouchableOpacity } from 'react-native';
+import React, { useState, PropsWithChildren } from 'react';
+import { View, Text, StyleSheet, TouchableOpacity, LayoutAnimation, Platform, UIManager } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
+import { Theme } from '../../constants/theme';
 
-import { ThemedText } from '@/components/themed-text';
-import { ThemedView } from '@/components/themed-view';
-import { IconSymbol } from '@/components/ui/icon-symbol';
-import { Theme } from '@/constants/theme';
-import { useColorScheme } from '@/hooks/use-color-scheme';
-
-export function Collapsible({ children, title }: PropsWithChildren & { title: string }) {
-  const [isOpen, setIsOpen] = useState(false);
-  const theme = useColorScheme() ?? 'light';
-
-  return (
-    <ThemedView>
-      <TouchableOpacity
-        style={styles.heading}
-        onPress={() => setIsOpen((value) => !value)}
-        activeOpacity={0.8}>
-        <IconSymbol
-          name="chevron.right"
-          size={18}
-          weight="medium"
-          color={theme === 'light' ? Theme.colors.darkGray : Theme.colors.darkGray}
-          style={{ transform: [{ rotate: isOpen ? '90deg' : '0deg' }] }}
-        />
-
-        <ThemedText type="defaultSemiBold">{title}</ThemedText>
-      </TouchableOpacity>
-      {isOpen && <ThemedView style={styles.content}>{children}</ThemedView>}
-    </ThemedView>
-  );
+// Enable LayoutAnimation for Android
+if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
+  UIManager.setLayoutAnimationEnabledExperimental(true);
 }
 
+type CollapsibleProps = PropsWithChildren<{
+  title: string;
+  defaultOpen?: boolean;
+}>;
+
+export const Collapsible: React.FC<CollapsibleProps> = ({ title, defaultOpen = false, children }) => {
+  const [isOpen, setIsOpen] = useState(defaultOpen);
+
+  const toggle = () => {
+    LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+    setIsOpen(!isOpen);
+  };
+
+  return (
+    <View style={styles.container}>
+      <TouchableOpacity style={styles.header} onPress={toggle} activeOpacity={0.7}>
+        <Text style={styles.title}>{title}</Text>
+        <View style={[styles.iconContainer, isOpen && styles.iconContainerOpen]}>
+          <Ionicons
+            name="chevron-down"
+            size={20}
+            color={Theme.colors.primary}
+          />
+        </View>
+      </TouchableOpacity>
+      {isOpen && <View style={styles.content}>{children}</View>}
+    </View>
+  );
+};
+
 const styles = StyleSheet.create({
-  heading: {
+  container: {
+    borderWidth: 1,
+    borderColor: Theme.colors.border,
+    borderRadius: Theme.radius.lg,
+    overflow: 'hidden',
+    backgroundColor: Theme.colors.card,
+  },
+  header: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 6,
+    justifyContent: 'space-between',
+    padding: Theme.spacing.md,
+    backgroundColor: Theme.colors.backgroundSecondary,
+  },
+  title: {
+    fontSize: Theme.font.size.md,
+    fontWeight: '600',
+    color: Theme.colors.text,
+    flex: 1,
+  },
+  iconContainer: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    backgroundColor: 'rgba(30, 64, 175, 0.1)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  iconContainerOpen: {
+    transform: [{ rotate: '180deg' }],
   },
   content: {
-    marginTop: 6,
-    marginLeft: 24,
+    backgroundColor: Theme.colors.card,
   },
 });

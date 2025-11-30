@@ -1,5 +1,6 @@
-// Conversational concierge with canned assistant replies and quick intents.
+// Enhanced Help/Concierge screen with safety-focused design
 import { Ionicons } from '@expo/vector-icons';
+import { LinearGradient } from 'expo-linear-gradient';
 import React, { useRef, useState } from 'react';
 import {
   View,
@@ -16,6 +17,7 @@ import {
 import { Theme } from '../../constants/theme';
 import { TAB_BAR_OVERLAY_HEIGHT } from '../../constants/layout';
 import Screen from '../../components/ui/Screen';
+import Card from '../../components/ui/Card';
 
 type Message = {
   id: number;
@@ -27,78 +29,75 @@ type Message = {
 
 const replyLibrary = [
   {
-    keywords: ['cafe', 'café', 'coffee'],
-    response: 'Safe Café Collective on Janpath stays open till midnight and has vetted cab bays outside.',
+    keywords: ['cafe', 'café', 'coffee', 'safe place'],
+    response: 'Safe Café Collective on Janpath stays open till midnight and has vetted cab bays outside. Would you like directions?',
   },
   {
-    keywords: ['night', 'area safe', 'dark'],
-    response: 'Stick to the lit boulevard and avoid the service lane after 11pm. Patrol cars loop every 20 min.',
+    keywords: ['night', 'area safe', 'dark', 'unsafe'],
+    response: 'For your safety at night, stick to well-lit main roads. Avoid service lanes after 11pm. Delhi Police patrols every 20 minutes in tourist areas.',
   },
   {
-    keywords: ['number', 'emergency', 'contact'],
-    response: 'Dial 112 for emergencies, 1091 for women safety, and 1363 for the bilingual tourist desk.',
+    keywords: ['number', 'emergency', 'contact', 'police'],
+    response: 'Key Emergency Numbers:\n• 112 - Universal Emergency\n• 100 - Police\n• 108 - Ambulance\n• 1091 - Women Safety\n• 1363 - Tourist Helpline (bilingual)',
+  },
+  {
+    keywords: ['hospital', 'doctor', 'medical', 'sick'],
+    response: 'Nearest hospitals with English-speaking staff:\n• RML Hospital (1.8 km) - Emergency: 011-23365555\n• Max Hospital (3.2 km)\n• Apollo (4.1 km)',
+  },
+  {
+    keywords: ['taxi', 'cab', 'uber', 'transport'],
+    response: 'For safe transport, use only:\n• Uber/Ola (verified drivers)\n• Metro (6am-11pm)\n• Pre-paid taxi from official counters\nAvoid unmarked vehicles.',
   },
 ];
 
-const helperCards = [
+const quickActions = [
+  {
+    id: 'emergency',
+    title: 'Emergency Numbers',
+    icon: 'call-outline',
+    preset: 'Show me emergency contact numbers',
+  },
+  {
+    id: 'safe-place',
+    title: 'Find Safe Place',
+    icon: 'location-outline',
+    preset: 'Find me a safe place nearby',
+  },
+  {
+    id: 'transport',
+    title: 'Safe Transport',
+    icon: 'car-outline',
+    preset: 'How do I find safe transport?',
+  },
+  {
+    id: 'medical',
+    title: 'Medical Help',
+    icon: 'medkit-outline',
+    preset: 'I need medical help',
+  },
+];
+
+const supportServices = [
   {
     id: 'concierge',
-    title: 'Concierge dial',
-    description: 'Speak with a bilingual guide for vetted rides.',
-    icon: 'call-outline',
-    preset: 'Connect me to the concierge hotline.',
+    title: 'Live Concierge',
+    description: '24/7 bilingual support for any situation',
+    icon: 'headset-outline',
+    available: true,
   },
   {
     id: 'escort',
-    title: 'Request local escort',
-    description: 'Field agent will meet you at a safe café.',
+    title: 'Safety Escort',
+    description: 'Request a verified local escort',
     icon: 'walk-outline',
-    preset: 'I need a local escort near Connaught Place.',
+    available: true,
   },
   {
-    id: 'share',
-    title: 'Share live itinerary',
-    description: 'Send routes + ETA to trusted circle.',
-    icon: 'navigate-circle-outline',
-    preset: 'Share my current itinerary with trusted contacts.',
-  },
-  {
-    id: 'volunteer',
-    title: 'Volunteer network',
-    description: 'Pair with vetted local volunteers.',
-    icon: 'hand-left-outline',
-    preset: 'Pair me with a volunteer buddy around me.',
-  },
-  {
-    id: 'wellness',
-    title: 'Wellness support',
-    description: 'Talk to a counselor or helpline.',
-    icon: 'heart-outline',
-    preset: 'Connect me to a mental health helpline nearby.',
-  },
-];
-
-const supportActions = [
-  {
-    id: 'volunteer',
-    title: 'Volunteer escort',
-    detail: 'Verified locals can walk you to your hotel.',
-    icon: 'shield-checkmark-outline',
-    preset: 'Request a vetted volunteer escort to my current location.',
-  },
-  {
-    id: 'community',
-    title: 'Community check-in',
-    detail: 'Set 15-min safety pings with a buddy.',
-    icon: 'people-outline',
-    preset: 'Start community check-ins every 15 minutes tonight.',
-  },
-  {
-    id: 'aid',
-    title: 'Relief / shelter',
-    detail: 'Ask for food, water, or a safe waiting spot.',
-    icon: 'home-outline',
-    preset: 'Find a safe waiting spot or shelter close by.',
+    id: 'translation',
+    title: 'Translation Help',
+    description: 'Real-time language assistance',
+    icon: 'language-outline',
+    available: true,
   },
 ];
 
@@ -106,27 +105,36 @@ const createTimestamp = () => new Date().toLocaleTimeString([], { hour: '2-digit
 
 const HelpScreen = () => {
   const [messages, setMessages] = useState<Message[]>(() => [
-    { id: 1, text: 'Hello! How can I help you today?', sender: 'assistant', timestamp: createTimestamp(), status: 'read' },
+    {
+      id: 1,
+      text: 'Hello! I\'m your safety concierge. How can I help you stay safe in India today?',
+      sender: 'assistant',
+      timestamp: createTimestamp(),
+      status: 'read',
+    },
   ]);
   const [inputText, setInputText] = useState('');
   const [isTyping, setIsTyping] = useState(false);
   const scrollRef = useRef<ScrollView>(null);
 
   const quickReplies = [
-    'Nearest safe café',
     'Is this area safe at night?',
-    'Show local emergency numbers',
-    'I want to volunteer as a safety buddy',
-    'Find me a female-led taxi',
-    'Connect me to a counselor now',
+    'Find safe café nearby',
+    'Emergency numbers',
+    'I feel unsafe',
+    'Need a taxi',
   ];
-  const assistantStatus = ['Concierge online', 'Avg reply 2m', 'Encrypted feed'];
-  const chatPartner = { name: 'Aro Concierge', status: 'Online now' };
 
   const getResponse = (text: string) => {
     const lower = text.toLowerCase();
     const template = replyLibrary.find((item) => item.keywords.some((keyword) => lower.includes(keyword)));
-    return template?.response ?? "I'm monitoring alerts and will nudge you if anything critical pops nearby.";
+    if (template) return template.response;
+    
+    if (lower.includes('unsafe') || lower.includes('scared') || lower.includes('help')) {
+      return 'I understand you\'re feeling unsafe. Here\'s what you can do:\n\n1. Move to a well-lit, crowded area\n2. Call 112 for emergency\n3. Share your live location with trusted contacts\n4. Use the SOS button in the app\n\nWould you like me to connect you with local support?';
+    }
+    
+    return "I'm here to help you stay safe. You can ask about:\n• Safe places nearby\n• Emergency contacts\n• Transport options\n• Medical help\n\nOr tap one of the quick action buttons above.";
   };
 
   const handleSend = (preset?: string) => {
@@ -157,435 +165,443 @@ const HelpScreen = () => {
         ];
       });
       setIsTyping(false);
-    }, 600);
+    }, 800);
   };
 
   return (
-    <Screen style={styles.screen} footerInset={TAB_BAR_OVERLAY_HEIGHT}>
+    <View style={styles.screen}>
       <KeyboardAvoidingView
-        style={styles.keyboardAvoidingView}
+        style={styles.keyboardView}
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-        keyboardVerticalOffset={Platform.OS === 'ios' ? 110 : 40}
+        keyboardVerticalOffset={Platform.OS === 'ios' ? 90 : 20}
       >
-        <View style={styles.chatContainer}>
-          <View style={styles.chatHeader}>
-            <View style={styles.headerLeft}>
-              <View style={styles.headerAvatar}>
-                <Text style={styles.headerAvatarText}>
-                  {chatPartner.name
-                    .split(' ')
-                    .map((part) => part[0])
-                    .join('')
-                    .slice(0, 2)
-                    .toUpperCase()}
-                </Text>
-              </View>
-              <View>
-                <Text style={styles.headerTitle}>{chatPartner.name}</Text>
-                <Text style={styles.headerSubtitle}>{chatPartner.status}</Text>
-              </View>
+        {/* Header */}
+        <LinearGradient colors={[Theme.colors.primary, Theme.colors.primaryDark]} style={styles.header}>
+          <View style={styles.headerContent}>
+            <View style={styles.headerAvatar}>
+              <Ionicons name="shield-checkmark" size={28} color={Theme.colors.white} />
             </View>
-            <View style={styles.headerActions}>
-              <Ionicons name="videocam-outline" size={22} color={Theme.colors.white} />
-              <Ionicons name="call-outline" size={22} color={Theme.colors.white} />
+            <View style={styles.headerInfo}>
+              <Text style={styles.headerTitle}>Safety Concierge</Text>
+              <View style={styles.headerStatus}>
+                <View style={styles.onlineDot} />
+                <Text style={styles.headerStatusText}>Online • 24/7 Support</Text>
+              </View>
             </View>
           </View>
-          <TouchableWithoutFeedback onPress={Keyboard.dismiss} accessible={false}>
-            <ScrollView
-              ref={scrollRef}
-              contentContainerStyle={styles.messagesContainer}
-              keyboardShouldPersistTaps="handled"
-              keyboardDismissMode="interactive"
-              onContentSizeChange={() => scrollRef.current?.scrollToEnd({ animated: true })}
-            >
-              <View style={styles.heroCard}>
-                <View style={styles.heroBadge}>
-                  <Ionicons name="chatbubble-ellipses-outline" size={18} color={Theme.colors.primary} />
-                  <Text style={styles.heroBadgeText}>Concierge desk</Text>
-                </View>
-                <Text style={styles.heroTitle}>Need help on the move?</Text>
-                <Text style={styles.heroSubtitle}>
-                  Pick an action card or drop a message to your command center.
-                </Text>
-                <View style={styles.heroPills}>
-                  {assistantStatus.map((pill) => (
-                    <View key={pill} style={styles.heroPill}>
-                      <Ionicons name="shield-checkmark-outline" size={14} color={Theme.colors.primary} />
-                      <Text style={styles.heroPillText}>{pill}</Text>
+        </LinearGradient>
+
+        <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
+          <ScrollView
+            ref={scrollRef}
+            style={styles.messagesScroll}
+            contentContainerStyle={styles.messagesContent}
+            keyboardShouldPersistTaps="handled"
+            onContentSizeChange={() => scrollRef.current?.scrollToEnd({ animated: true })}
+          >
+            {/* Quick Actions */}
+            <View style={styles.quickActionsSection}>
+              <Text style={styles.quickActionsTitle}>Quick Help</Text>
+              <View style={styles.quickActionsGrid}>
+                {quickActions.map((action) => (
+                  <TouchableOpacity
+                    key={action.id}
+                    style={styles.quickActionCard}
+                    onPress={() => handleSend(action.preset)}
+                  >
+                    <View style={styles.quickActionIcon}>
+                      <Ionicons name={action.icon as any} size={22} color={Theme.colors.primary} />
                     </View>
-                  ))}
-                </View>
-                <View style={styles.helperCardGrid}>
-                  {helperCards.map((card) => (
-                    <TouchableOpacity key={card.id} style={styles.helperCard} onPress={() => handleSend(card.preset)}>
-                      <View style={styles.helperIcon}>
-                        <Ionicons name={card.icon as any} size={18} color={Theme.colors.primary} />
-                      </View>
-                      <Text style={styles.helperTitle}>{card.title}</Text>
-                      <Text style={styles.helperSubtitle}>{card.description}</Text>
-                    </TouchableOpacity>
-                  ))}
-                </View>
-                <View style={styles.supportList}>
-                  {supportActions.map((action) => (
-                    <TouchableOpacity key={action.id} style={styles.supportRow} onPress={() => handleSend(action.preset)}>
-                      <View style={styles.supportIcon}>
-                        <Ionicons name={action.icon as any} size={16} color={Theme.colors.primary} />
-                      </View>
-                      <View style={{ flex: 1 }}>
-                        <Text style={styles.supportTitle}>{action.title}</Text>
-                        <Text style={styles.supportDetail}>{action.detail}</Text>
-                      </View>
-                      <Ionicons name="chevron-forward" size={18} color={Theme.colors.subtleText} />
-                    </TouchableOpacity>
-                  ))}
-                </View>
+                    <Text style={styles.quickActionTitle}>{action.title}</Text>
+                  </TouchableOpacity>
+                ))}
               </View>
+            </View>
+
+            {/* Support Services */}
+            <View style={styles.servicesSection}>
+              <Text style={styles.servicesTitle}>Support Services</Text>
+              {supportServices.map((service) => (
+                <TouchableOpacity key={service.id} style={styles.serviceRow}>
+                  <View style={styles.serviceIcon}>
+                    <Ionicons name={service.icon as any} size={20} color={Theme.colors.primary} />
+                  </View>
+                  <View style={styles.serviceInfo}>
+                    <Text style={styles.serviceTitle}>{service.title}</Text>
+                    <Text style={styles.serviceDesc}>{service.description}</Text>
+                  </View>
+                  <View style={[styles.availableBadge, !service.available && styles.unavailableBadge]}>
+                    <Text style={[styles.availableText, !service.available && styles.unavailableText]}>
+                      {service.available ? 'Available' : 'Busy'}
+                    </Text>
+                  </View>
+                </TouchableOpacity>
+              ))}
+            </View>
+
+            {/* Messages */}
+            <View style={styles.messagesSection}>
+              <Text style={styles.messagesTitle}>Conversation</Text>
               {messages.map((msg) => {
                 const isUser = msg.sender === 'user';
-                const statusIcon = msg.status === 'sent' ? 'checkmark' : 'checkmark-done';
-                const statusColor = msg.status === 'read' ? '#34B7F1' : Theme.colors.subtleText;
-
                 return (
-                  <View key={msg.id} style={[styles.messageBubble, isUser ? styles.userBubble : styles.assistantBubble]}>
-                    <Text style={[styles.messageText, isUser && styles.messageTextUser]}>{msg.text}</Text>
-                    <View style={styles.messageMetaRow}>
-                      <Text style={[styles.messageTimestamp, isUser && styles.messageTimestampUser]}>
-                        {msg.timestamp}
-                      </Text>
-                      {isUser && <Ionicons name={statusIcon as any} size={14} color={statusColor} />}
+                  <View
+                    key={msg.id}
+                    style={[styles.messageBubble, isUser ? styles.userBubble : styles.assistantBubble]}
+                  >
+                    {!isUser && (
+                      <View style={styles.assistantIcon}>
+                        <Ionicons name="shield-checkmark" size={16} color={Theme.colors.primary} />
+                      </View>
+                    )}
+                    <View style={[styles.messageContent, isUser && styles.userMessageContent]}>
+                      <Text style={[styles.messageText, isUser && styles.userMessageText]}>{msg.text}</Text>
+                      <View style={styles.messageMeta}>
+                        <Text style={[styles.messageTime, isUser && styles.userMessageTime]}>
+                          {msg.timestamp}
+                        </Text>
+                        {isUser && (
+                          <Ionicons
+                            name={msg.status === 'read' ? 'checkmark-done' : 'checkmark'}
+                            size={14}
+                            color={msg.status === 'read' ? Theme.colors.primary : Theme.colors.subtleText}
+                          />
+                        )}
+                      </View>
                     </View>
                   </View>
                 );
               })}
               {isTyping && (
                 <View style={[styles.messageBubble, styles.assistantBubble]}>
-                  <View style={styles.typingDots}>
-                    <View style={styles.dot} />
-                    <View style={styles.dot} />
-                    <View style={styles.dot} />
+                  <View style={styles.assistantIcon}>
+                    <Ionicons name="shield-checkmark" size={16} color={Theme.colors.primary} />
+                  </View>
+                  <View style={styles.messageContent}>
+                    <View style={styles.typingDots}>
+                      <View style={styles.dot} />
+                      <View style={styles.dot} />
+                      <View style={styles.dot} />
+                    </View>
                   </View>
                 </View>
               )}
-            </ScrollView>
-          </TouchableWithoutFeedback>
-        </View>
+            </View>
+          </ScrollView>
+        </TouchableWithoutFeedback>
 
+        {/* Input Area */}
         <View style={styles.inputContainer}>
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.quickRepliesScroll}>
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={styles.quickRepliesScroll}
+          >
             {quickReplies.map((reply, index) => (
               <TouchableOpacity key={index} style={styles.quickReply} onPress={() => handleSend(reply)}>
                 <Text style={styles.quickReplyText}>{reply}</Text>
               </TouchableOpacity>
             ))}
           </ScrollView>
-          <View style={styles.textInputRow}>
-            <View style={styles.textInputShell}>
-              <TouchableOpacity style={styles.inputIconButton}>
-                <Ionicons name="happy-outline" size={20} color={Theme.colors.subtleText} />
-              </TouchableOpacity>
+          <View style={styles.inputRow}>
+            <View style={styles.inputWrapper}>
               <TextInput
                 style={styles.textInput}
-                placeholder="Message"
+                placeholder="Type your message..."
                 placeholderTextColor={Theme.colors.subtleText}
                 value={inputText}
                 onChangeText={setInputText}
                 onSubmitEditing={() => handleSend()}
+                multiline
               />
-              <TouchableOpacity style={styles.inputIconButton}>
-                <Ionicons name="attach-outline" size={20} color={Theme.colors.subtleText} />
-              </TouchableOpacity>
-              <TouchableOpacity style={styles.inputIconButton}>
-                <Ionicons name="camera-outline" size={20} color={Theme.colors.subtleText} />
-              </TouchableOpacity>
             </View>
-            <TouchableOpacity onPress={() => handleSend()} style={styles.micButton}>
-              <Ionicons name={inputText ? 'send' : 'mic-outline'} size={20} color={Theme.colors.white} />
+            <TouchableOpacity
+              style={[styles.sendButton, !inputText.trim() && styles.sendButtonDisabled]}
+              onPress={() => handleSend()}
+              disabled={!inputText.trim()}
+            >
+              <Ionicons name="send" size={20} color={Theme.colors.white} />
             </TouchableOpacity>
           </View>
         </View>
+
+        <View style={{ height: TAB_BAR_OVERLAY_HEIGHT }} />
       </KeyboardAvoidingView>
-    </Screen>
+    </View>
   );
 };
 
 const styles = StyleSheet.create({
   screen: {
-    backgroundColor: '#ece5dd',
-    padding: 0,
+    flex: 1,
+    backgroundColor: Theme.colors.background,
   },
-  keyboardAvoidingView: {
+  keyboardView: {
     flex: 1,
   },
-  chatContainer: {
-    flex: 1,
-  },
-  chatHeader: {
-    backgroundColor: '#075E54',
-    paddingHorizontal: Theme.spacing.md,
-    paddingTop: Theme.spacing.lg,
+  header: {
+    paddingTop: 50,
     paddingBottom: Theme.spacing.md,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
+    paddingHorizontal: Theme.spacing.md,
   },
-  headerLeft: {
+  headerContent: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: Theme.spacing.sm,
+    gap: Theme.spacing.md,
   },
   headerAvatar: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
+    width: 52,
+    height: 52,
+    borderRadius: 26,
     backgroundColor: 'rgba(255,255,255,0.2)',
     justifyContent: 'center',
     alignItems: 'center',
   },
-  headerAvatarText: {
-    fontFamily: Theme.font.family.sansBold,
-    color: Theme.colors.white,
-    fontSize: Theme.font.size.md,
+  headerInfo: {
+    flex: 1,
   },
   headerTitle: {
-    fontFamily: Theme.font.family.sansBold,
+    fontSize: Theme.font.size.lg,
+    fontWeight: '700',
     color: Theme.colors.white,
   },
-  headerSubtitle: {
-    fontFamily: Theme.font.family.sans,
-    color: 'rgba(255,255,255,0.8)',
-    fontSize: Theme.font.size.xs,
-  },
-  headerActions: {
+  headerStatus: {
     flexDirection: 'row',
-    gap: Theme.spacing.md,
+    alignItems: 'center',
+    gap: Theme.spacing.xs,
+    marginTop: 2,
   },
-  messagesContainer: {
+  onlineDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: Theme.colors.success,
+  },
+  headerStatusText: {
+    color: 'rgba(255,255,255,0.9)',
+    fontSize: Theme.font.size.sm,
+  },
+  messagesScroll: {
+    flex: 1,
+  },
+  messagesContent: {
     padding: Theme.spacing.md,
-    paddingBottom: Theme.spacing.lg,
-    gap: Theme.spacing.md,
-    backgroundColor: '#ece5dd',
+    gap: Theme.spacing.lg,
   },
-  heroCard: {
+  quickActionsSection: {
+    gap: Theme.spacing.sm,
+  },
+  quickActionsTitle: {
+    fontWeight: '700',
+    color: Theme.colors.text,
+    fontSize: Theme.font.size.md,
+  },
+  quickActionsGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: Theme.spacing.sm,
+  },
+  quickActionCard: {
+    flex: 1,
+    minWidth: '45%',
     backgroundColor: Theme.colors.card,
-    borderRadius: Theme.radius.lg,
     padding: Theme.spacing.md,
-    borderWidth: 1,
-    borderColor: 'rgba(15,23,42,0.06)',
-    gap: Theme.spacing.sm,
-  },
-  heroBadge: {
-    flexDirection: 'row',
+    borderRadius: Theme.radius.lg,
     alignItems: 'center',
     gap: Theme.spacing.xs,
-    paddingHorizontal: Theme.spacing.sm,
-    paddingVertical: 4,
-    borderRadius: Theme.radius.full,
-    backgroundColor: 'rgba(85,99,255,0.12)',
-    alignSelf: 'flex-start',
+    ...Theme.shadows.sm,
   },
-  heroBadgeText: {
-    fontFamily: Theme.font.family.sansBold,
-    color: Theme.colors.primary,
-    fontSize: Theme.font.size.xs,
-  },
-  heroTitle: {
-    fontFamily: Theme.font.family.sansBold,
-    fontSize: Theme.font.size.lg,
-    color: Theme.colors.text,
-  },
-  heroSubtitle: {
-    fontFamily: Theme.font.family.sans,
-    color: Theme.colors.subtleText,
-  },
-  heroPills: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: Theme.spacing.sm,
-  },
-  heroPill: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: Theme.spacing.xs,
-    paddingHorizontal: Theme.spacing.sm,
-    paddingVertical: Theme.spacing.xs,
-    borderRadius: Theme.radius.full,
-    backgroundColor: 'rgba(85,99,255,0.1)',
-  },
-  heroPillText: {
-    fontFamily: Theme.font.family.sansBold,
-    color: Theme.colors.primary,
-    fontSize: Theme.font.size.xs,
-  },
-  helperCardGrid: {
-    flexDirection: 'row',
-    gap: Theme.spacing.sm,
-    flexWrap: 'wrap',
-  },
-  supportList: {
-    marginTop: Theme.spacing.sm,
-    gap: Theme.spacing.sm,
-  },
-  supportRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: Theme.spacing.sm,
-    padding: Theme.spacing.sm,
-    borderRadius: Theme.radius.lg,
-    borderWidth: 1,
-    borderColor: 'rgba(15,23,42,0.08)',
-    backgroundColor: 'rgba(255,255,255,0.9)',
-  },
-  supportIcon: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: 'rgba(85,99,255,0.12)',
-  },
-  supportTitle: {
-    fontFamily: Theme.font.family.sansBold,
-    color: Theme.colors.text,
-  },
-  supportDetail: {
-    fontFamily: Theme.font.family.sans,
-    color: Theme.colors.subtleText,
-    fontSize: Theme.font.size.sm,
-  },
-  helperCard: {
-    flex: 1,
-    minWidth: 140,
-    borderRadius: Theme.radius.lg,
-    borderWidth: 1,
-    borderColor: 'rgba(15,23,42,0.08)',
-    padding: Theme.spacing.md,
-    backgroundColor: Theme.colors.background,
-    gap: Theme.spacing.xs,
-  },
-  helperIcon: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    backgroundColor: 'rgba(85,99,255,0.12)',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  helperTitle: {
-    fontFamily: Theme.font.family.sansBold,
-    color: Theme.colors.text,
-  },
-  helperSubtitle: {
-    fontFamily: Theme.font.family.sans,
-    color: Theme.colors.subtleText,
-    fontSize: Theme.font.size.sm,
-  },
-  messageBubble: {
-    paddingVertical: Theme.spacing.sm,
-    paddingHorizontal: Theme.spacing.md,
-    marginBottom: Theme.spacing.sm,
-    maxWidth: '80%',
-    borderRadius: Theme.radius.lg,
-  },
-  userBubble: {
-    backgroundColor: '#d9fdd3',
-    alignSelf: 'flex-end',
-    borderTopRightRadius: Theme.radius.sm,
-    borderTopLeftRadius: Theme.radius.lg,
-  },
-  assistantBubble: {
-    backgroundColor: Theme.colors.white,
-    alignSelf: 'flex-start',
-    borderTopLeftRadius: Theme.radius.sm,
-  },
-  messageText: {
-    fontSize: Theme.font.size.md,
-    fontFamily: Theme.font.family.sans,
-    color: Theme.colors.text,
-  },
-  messageTextUser: {
-    color: Theme.colors.text,
-  },
-  messageMetaRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-    justifyContent: 'flex-end',
-    marginTop: 4,
-  },
-  messageTimestamp: {
-    fontFamily: Theme.font.family.sans,
-    fontSize: Theme.font.size.xs,
-    color: Theme.colors.subtleText,
-  },
-  messageTimestampUser: {
-    color: '#1c5c3c',
-  },
-  inputContainer: {
-    padding: Theme.spacing.md,
-    borderTopWidth: 1,
-    borderTopColor: Theme.colors.lightGray,
-    backgroundColor: '#f7f7f7',
-  },
-  quickRepliesScroll: {
-    marginBottom: Theme.spacing.md,
-  },
-  quickReply: {
-    backgroundColor: Theme.colors.white,
-    paddingVertical: Theme.spacing.sm,
-    paddingHorizontal: Theme.spacing.md,
-    borderRadius: Theme.radius.full,
-    marginRight: Theme.spacing.sm,
-    borderWidth: 1,
-    borderColor: 'rgba(0,0,0,0.08)',
-  },
-  quickReplyText: {
-    fontSize: Theme.font.size.sm,
-    fontFamily: Theme.font.family.sansBold,
-    color: Theme.colors.text,
-  },
-  textInputRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: Theme.spacing.sm,
-  },
-  textInputShell: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: Theme.colors.white,
-    borderRadius: Theme.radius.full,
-    paddingHorizontal: Theme.spacing.sm,
-    borderWidth: 1,
-    borderColor: 'rgba(0,0,0,0.08)',
-  },
-  inputIconButton: {
-    padding: 4,
-  },
-  textInput: {
-    flex: 1,
-    minHeight: 40,
-    fontSize: Theme.font.size.md,
-    fontFamily: Theme.font.family.sans,
-    color: Theme.colors.text,
-  },
-  micButton: {
-    backgroundColor: Theme.colors.primary,
+  quickActionIcon: {
     width: 44,
     height: 44,
     borderRadius: 22,
+    backgroundColor: 'rgba(30, 64, 175, 0.1)',
     justifyContent: 'center',
     alignItems: 'center',
   },
+  quickActionTitle: {
+    fontWeight: '600',
+    color: Theme.colors.text,
+    fontSize: Theme.font.size.sm,
+    textAlign: 'center',
+  },
+  servicesSection: {
+    gap: Theme.spacing.sm,
+  },
+  servicesTitle: {
+    fontWeight: '700',
+    color: Theme.colors.text,
+    fontSize: Theme.font.size.md,
+  },
+  serviceRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: Theme.colors.card,
+    padding: Theme.spacing.md,
+    borderRadius: Theme.radius.lg,
+    gap: Theme.spacing.md,
+    ...Theme.shadows.sm,
+  },
+  serviceIcon: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: 'rgba(30, 64, 175, 0.1)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  serviceInfo: {
+    flex: 1,
+  },
+  serviceTitle: {
+    fontWeight: '600',
+    color: Theme.colors.text,
+  },
+  serviceDesc: {
+    color: Theme.colors.subtleText,
+    fontSize: Theme.font.size.sm,
+  },
+  availableBadge: {
+    backgroundColor: Theme.colors.successBg,
+    paddingHorizontal: Theme.spacing.sm,
+    paddingVertical: 4,
+    borderRadius: Theme.radius.full,
+  },
+  unavailableBadge: {
+    backgroundColor: Theme.colors.warningBg,
+  },
+  availableText: {
+    color: Theme.colors.success,
+    fontSize: Theme.font.size.xs,
+    fontWeight: '600',
+  },
+  unavailableText: {
+    color: Theme.colors.warning,
+  },
+  messagesSection: {
+    gap: Theme.spacing.sm,
+  },
+  messagesTitle: {
+    fontWeight: '700',
+    color: Theme.colors.text,
+    fontSize: Theme.font.size.md,
+  },
+  messageBubble: {
+    flexDirection: 'row',
+    gap: Theme.spacing.sm,
+    marginBottom: Theme.spacing.sm,
+  },
+  userBubble: {
+    justifyContent: 'flex-end',
+  },
+  assistantBubble: {
+    justifyContent: 'flex-start',
+  },
+  assistantIcon: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: 'rgba(30, 64, 175, 0.1)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  messageContent: {
+    maxWidth: '75%',
+    backgroundColor: Theme.colors.card,
+    padding: Theme.spacing.md,
+    borderRadius: Theme.radius.lg,
+    borderTopLeftRadius: Theme.radius.xs,
+    ...Theme.shadows.sm,
+  },
+  userMessageContent: {
+    backgroundColor: Theme.colors.primary,
+    borderTopLeftRadius: Theme.radius.lg,
+    borderTopRightRadius: Theme.radius.xs,
+  },
+  messageText: {
+    color: Theme.colors.text,
+    lineHeight: 20,
+  },
+  userMessageText: {
+    color: Theme.colors.white,
+  },
+  messageMeta: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'flex-end',
+    gap: 4,
+    marginTop: 4,
+  },
+  messageTime: {
+    fontSize: Theme.font.size.xs,
+    color: Theme.colors.subtleText,
+  },
+  userMessageTime: {
+    color: 'rgba(255,255,255,0.7)',
+  },
   typingDots: {
     flexDirection: 'row',
-    gap: 6,
+    gap: 4,
+    padding: Theme.spacing.xs,
   },
   dot: {
     width: 8,
     height: 8,
     borderRadius: 4,
     backgroundColor: Theme.colors.subtleText,
+  },
+  inputContainer: {
+    backgroundColor: Theme.colors.card,
+    paddingTop: Theme.spacing.sm,
+    paddingHorizontal: Theme.spacing.md,
+    borderTopWidth: 1,
+    borderTopColor: Theme.colors.border,
+  },
+  quickRepliesScroll: {
+    paddingBottom: Theme.spacing.sm,
+    gap: Theme.spacing.sm,
+  },
+  quickReply: {
+    backgroundColor: Theme.colors.backgroundSecondary,
+    paddingVertical: Theme.spacing.sm,
+    paddingHorizontal: Theme.spacing.md,
+    borderRadius: Theme.radius.full,
+    marginRight: Theme.spacing.sm,
+  },
+  quickReplyText: {
+    color: Theme.colors.text,
+    fontSize: Theme.font.size.sm,
+    fontWeight: '500',
+  },
+  inputRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-end',
+    gap: Theme.spacing.sm,
+    paddingBottom: Theme.spacing.sm,
+  },
+  inputWrapper: {
+    flex: 1,
+    backgroundColor: Theme.colors.backgroundSecondary,
+    borderRadius: Theme.radius.lg,
+    paddingHorizontal: Theme.spacing.md,
+    paddingVertical: Theme.spacing.sm,
+    maxHeight: 100,
+  },
+  textInput: {
+    color: Theme.colors.text,
+    fontSize: Theme.font.size.md,
+    maxHeight: 80,
+  },
+  sendButton: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: Theme.colors.primary,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  sendButtonDisabled: {
+    backgroundColor: Theme.colors.lightGray,
   },
 });
 
