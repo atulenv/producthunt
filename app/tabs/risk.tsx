@@ -212,81 +212,119 @@ const RiskZoneMapScreen = () => {
 
         {/* Map Container */}
         <View style={styles.mapContainer}>
-          <MapView
-            ref={mapRef}
-            style={styles.map}
-            provider={PROVIDER_DEFAULT}
-            initialRegion={currentRegion}
-            showsUserLocation
-            showsMyLocationButton={false}
-            customMapStyle={mapStyle}
-          >
-            {/* Risk Zone Circles */}
-            {filteredZones.map((zone) => {
-              const colors = categoryColors[zone.category];
-              const baseRadius = 200 + zone.intensity * 300;
-              return (
-                <React.Fragment key={zone.id}>
-                  {/* Outer glow */}
-                  <Circle
-                    center={{ latitude: zone.latitude, longitude: zone.longitude }}
-                    radius={baseRadius * 1.5}
-                    fillColor={colors.fill.replace('0.25', '0.08')}
-                    strokeWidth={0}
-                  />
-                  {/* Main circle */}
-                  <Circle
-                    center={{ latitude: zone.latitude, longitude: zone.longitude }}
-                    radius={baseRadius}
-                    fillColor={colors.fill}
-                    strokeColor={colors.stroke}
-                    strokeWidth={2}
-                  />
-                  {/* Center marker */}
-                  <Marker
-                    coordinate={{ latitude: zone.latitude, longitude: zone.longitude }}
-                    onPress={() => handleZonePress(zone)}
-                  >
-                    <View style={[styles.marker, { backgroundColor: colors.marker }]}>
-                      <Ionicons
-                        name={
-                          zone.category === 'theft'
-                            ? 'bag-remove'
-                            : zone.category === 'harassment'
-                            ? 'warning'
-                            : 'alert-circle'
-                        }
-                        size={16}
-                        color={Theme.colors.white}
-                      />
-                    </View>
-                  </Marker>
-                </React.Fragment>
-              );
-            })}
-          </MapView>
-
-          {/* Map Overlay Stats */}
-          <View style={styles.mapOverlay}>
-            <View style={styles.overlayStats}>
-              <View style={styles.overlayStat}>
-                <Text style={styles.overlayStatValue}>{stats.total}</Text>
-                <Text style={styles.overlayStatLabel}>Zones</Text>
-              </View>
-              <View style={[styles.overlayStat, styles.overlayStatDanger]}>
-                <Text style={[styles.overlayStatValue, { color: Theme.colors.emergency }]}>{stats.critical}</Text>
-                <Text style={styles.overlayStatLabel}>Critical</Text>
-              </View>
-              <View style={styles.overlayStat}>
-                <Text style={[styles.overlayStatValue, { color: Theme.colors.warning }]}>{stats.high}</Text>
-                <Text style={styles.overlayStatLabel}>High</Text>
+          {Platform.OS === 'web' ? (
+            // Web fallback - show placeholder with zone list
+            <View style={styles.webMapPlaceholder}>
+              <Ionicons name="map" size={48} color={Theme.colors.primary} />
+              <Text style={styles.webMapTitle}>Interactive Safety Map</Text>
+              <Text style={styles.webMapSubtitle}>
+                Full map experience available on mobile app
+              </Text>
+              <View style={styles.webMapStats}>
+                <View style={styles.webMapStat}>
+                  <Text style={styles.webMapStatValue}>{stats.total}</Text>
+                  <Text style={styles.webMapStatLabel}>Risk Zones</Text>
+                </View>
+                <View style={styles.webMapStat}>
+                  <Text style={[styles.webMapStatValue, { color: Theme.colors.emergency }]}>{stats.critical}</Text>
+                  <Text style={styles.webMapStatLabel}>Critical</Text>
+                </View>
+                <View style={styles.webMapStat}>
+                  <Text style={[styles.webMapStatValue, { color: Theme.colors.warning }]}>{stats.high}</Text>
+                  <Text style={styles.webMapStatLabel}>High Risk</Text>
+                </View>
               </View>
             </View>
-          </View>
+          ) : MapView ? (
+            <MapView
+              ref={mapRef}
+              style={styles.map}
+              provider={PROVIDER_DEFAULT}
+              initialRegion={currentRegion}
+              showsUserLocation
+              showsMyLocationButton={false}
+              customMapStyle={mapStyle}
+            >
+              {/* Risk Zone Circles */}
+              {filteredZones.map((zone) => {
+                const colors = categoryColors[zone.category];
+                const baseRadius = 200 + zone.intensity * 300;
+                return (
+                  <React.Fragment key={zone.id}>
+                    {/* Outer glow */}
+                    {Circle && (
+                      <Circle
+                        center={{ latitude: zone.latitude, longitude: zone.longitude }}
+                        radius={baseRadius * 1.5}
+                        fillColor={colors.fill.replace('0.25', '0.08')}
+                        strokeWidth={0}
+                      />
+                    )}
+                    {/* Main circle */}
+                    {Circle && (
+                      <Circle
+                        center={{ latitude: zone.latitude, longitude: zone.longitude }}
+                        radius={baseRadius}
+                        fillColor={colors.fill}
+                        strokeColor={colors.stroke}
+                        strokeWidth={2}
+                      />
+                    )}
+                    {/* Center marker */}
+                    {Marker && (
+                      <Marker
+                        coordinate={{ latitude: zone.latitude, longitude: zone.longitude }}
+                        onPress={() => handleZonePress(zone)}
+                      >
+                        <View style={[styles.marker, { backgroundColor: colors.marker }]}>
+                          <Ionicons
+                            name={
+                              zone.category === 'theft'
+                                ? 'bag-remove'
+                                : zone.category === 'harassment'
+                                ? 'warning'
+                                : 'alert-circle'
+                            }
+                            size={16}
+                            color={Theme.colors.white}
+                          />
+                        </View>
+                      </Marker>
+                    )}
+                  </React.Fragment>
+                );
+              })}
+            </MapView>
+          ) : (
+            <View style={styles.webMapPlaceholder}>
+              <Text>Map loading...</Text>
+            </View>
+          )}
+
+          {/* Map Overlay Stats - only on native */}
+          {Platform.OS !== 'web' && (
+            <View style={styles.mapOverlay}>
+              <View style={styles.overlayStats}>
+                <View style={styles.overlayStat}>
+                  <Text style={styles.overlayStatValue}>{stats.total}</Text>
+                  <Text style={styles.overlayStatLabel}>Zones</Text>
+                </View>
+                <View style={[styles.overlayStat, styles.overlayStatDanger]}>
+                  <Text style={[styles.overlayStatValue, { color: Theme.colors.emergency }]}>{stats.critical}</Text>
+                  <Text style={styles.overlayStatLabel}>Critical</Text>
+                </View>
+                <View style={styles.overlayStat}>
+                  <Text style={[styles.overlayStatValue, { color: Theme.colors.warning }]}>{stats.high}</Text>
+                  <Text style={styles.overlayStatLabel}>High</Text>
+                </View>
+              </View>
+            </View>
+          )}
 
           {/* My Location Button */}
           <TouchableOpacity style={styles.locationButton}>
             <Ionicons name="locate" size={22} color={Theme.colors.primary} />
+          </TouchableOpacity>
           </TouchableOpacity>
         </View>
 
