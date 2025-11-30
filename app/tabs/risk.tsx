@@ -1,28 +1,67 @@
+// Enhanced Risk Zone Map with better visualization for India
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Dimensions, Platform, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
-import MapView, { Circle, Heatmap, Marker, PROVIDER_DEFAULT } from 'react-native-maps';
-import type { MapHeatmapProps } from 'react-native-maps';
+import MapView, { Circle, Marker, PROVIDER_DEFAULT, Region } from 'react-native-maps';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import { Theme } from '../../constants/theme';
 import { TAB_BAR_OVERLAY_HEIGHT } from '../../constants/layout';
 import { HEAT_LEGEND, RISK_ZONES, RiskCategory, RiskZone } from '../../src/lib/risk-heatmap';
-
-type HeatPoint = NonNullable<MapHeatmapProps['points']>[number];
-
-const fallbackRegion = {
-  latitude: 28.6325,
-  longitude: 77.2194,
-  latitudeDelta: 0.04,
-  longitudeDelta: 0.04,
-};
-
-const formatTime = (date: Date) => `${date.getHours().toString().padStart(2, '0')}:${date
-  .getMinutes()
-  .toString()
-  .padStart(2, '0')}`;
+import Card from '../../components/ui/Card';
+import SectionHeader from '../../components/ui/SectionHeader';
 
 type LiveRiskZone = RiskZone & { lastUpdate: string };
+
+// India-focused initial region (Delhi NCR)
+const INDIA_REGIONS = {
+  delhi: {
+    latitude: 28.6139,
+    longitude: 77.2090,
+    latitudeDelta: 0.08,
+    longitudeDelta: 0.08,
+    name: 'Delhi NCR',
+  },
+  mumbai: {
+    latitude: 19.0760,
+    longitude: 72.8777,
+    latitudeDelta: 0.08,
+    longitudeDelta: 0.08,
+    name: 'Mumbai',
+  },
+  jaipur: {
+    latitude: 26.9124,
+    longitude: 75.7873,
+    latitudeDelta: 0.08,
+    longitudeDelta: 0.08,
+    name: 'Jaipur',
+  },
+  agra: {
+    latitude: 27.1767,
+    longitude: 78.0081,
+    latitudeDelta: 0.08,
+    longitudeDelta: 0.08,
+    name: 'Agra',
+  },
+};
+
+const categories: { id: RiskCategory | 'all'; label: string; icon: keyof typeof Ionicons.glyphMap; color: string }[] = [
+  { id: 'all', label: 'All Zones', icon: 'layers-outline', color: Theme.colors.primary },
+  { id: 'theft', label: 'Theft', icon: 'bag-remove-outline', color: '#DC2626' },
+  { id: 'harassment', label: 'Harassment', icon: 'warning-outline', color: '#F59E0B' },
+  { id: 'danger', label: 'Danger', icon: 'skull-outline', color: '#7C3AED' },
+];
+
+const categoryColors: Record<RiskCategory, { fill: string; stroke: string; marker: string }> = {
+  theft: { fill: 'rgba(220, 38, 38, 0.25)', stroke: '#DC2626', marker: '#DC2626' },
+  harassment: { fill: 'rgba(245, 158, 11, 0.25)', stroke: '#F59E0B', marker: '#F59E0B' },
+  danger: { fill: 'rgba(124, 58, 237, 0.25)', stroke: '#7C3AED', marker: '#7C3AED' },
+};
+
+const severityLabel = (intensity: number) => {
+  if (intensity >= 0.75) return { label: 'Critical', color: Theme.colors.emergency };
+  if (intensity >= 0.5) return { label: 'High', color: Theme.colors.warning };
+  return { label: 'Moderate', color: Theme.colors.success };
+};
 
 const createLiveZones = (): LiveRiskZone[] =>
   RISK_ZONES.map((zone) => ({
@@ -30,85 +69,33 @@ const createLiveZones = (): LiveRiskZone[] =>
     lastUpdate: `${Math.floor(Math.random() * 4) + 1} min ago`,
   }));
 
-const categories: { id: RiskCategory | 'all'; label: string }[] = [
-  { id: 'all', label: 'All' },
-  { id: 'theft', label: 'Theft' },
-  { id: 'harassment', label: 'Harassment' },
-  { id: 'danger', label: 'Danger' },
-];
+const formatTime = (date: Date) =>
+  `${date.getHours().toString().padStart(2, '0')}:${date.getMinutes().toString().padStart(2, '0')}`;
 
-const categoryRgb: Record<RiskCategory, string> = {
-  theft: '244,67,54',
-  harassment: '255,152,0',
-  danger: '116,63,181',
-};
-
-const categoryHex: Record<RiskCategory, string> = {
-  theft: '#f44336',
-  harassment: '#ff9800',
-  danger: '#743fb5',
-};
-
-const categoryFill = (category: RiskCategory, opacity = 0.32) => `rgba(${categoryRgb[category]},${opacity})`;
-
-const severityLabel = (intensity: number) => {
-  if (intensity >= 0.75) return 'Critical';
-  if (intensity >= 0.5) return 'Elevated';
-  return 'Watch';
-};
-
-const fallbackHeatSteps = [1, 1.45, 2];
-
-const heatmapGradient: MapHeatmapProps['gradient'] = {
-  colorMapSize: 512,
-  colors: ['rgba(0,191,165,0.05)', 'rgba(0,191,165,0.45)', '#FFB300', '#E53935'],
-  startPoints: [0.1, 0.4, 0.7, 0.95],
-};
-
-// Native heatmaps crash on iOS/Apple Maps, so gate behind Android-only support and
-// fall back to our manual circle layers elsewhere.
-const supportsNativeHeatmap = Platform.OS === 'android';
 const { height: screenHeight } = Dimensions.get('window');
-const mapHeight = Math.min(screenHeight * 0.6, 520);
-
-const providerLogos = [
-  { id: 'google', icon: 'logo-google' as const, label: 'Google Safety' },
-  { id: 'delhi', icon: 'shield-checkmark-outline' as const, label: 'Delhi Police' },
-  { id: 'who', icon: 'medkit-outline' as const, label: 'WHO Clinics' },
-  { id: 'aro', icon: 'pulse-outline' as const, label: 'Aro Command' },
-];
+const mapHeight = Math.min(screenHeight * 0.5, 400);
 
 const RiskZoneMapScreen = () => {
   const mapRef = useRef<MapView | null>(null);
   const [filter, setFilter] = useState<RiskCategory | 'all'>('all');
   const [zones, setZones] = useState<LiveRiskZone[]>(createLiveZones);
   const [lastSynced, setLastSynced] = useState(new Date());
+  const [selectedCity, setSelectedCity] = useState<keyof typeof INDIA_REGIONS>('delhi');
+  const [selectedZone, setSelectedZone] = useState<LiveRiskZone | null>(null);
 
   const filteredZones = useMemo(
     () => (filter === 'all' ? zones : zones.filter((zone) => zone.category === filter)),
     [zones, filter]
   );
 
-  const focusRegion = useMemo(() => {
-    if (filteredZones.length === 0) {
-      return fallbackRegion;
-    }
-    const avgLat = filteredZones.reduce((sum, zone) => sum + zone.latitude, 0) / filteredZones.length;
-    const avgLng = filteredZones.reduce((sum, zone) => sum + zone.longitude, 0) / filteredZones.length;
-    return { latitude: avgLat, longitude: avgLng, latitudeDelta: 0.04, longitudeDelta: 0.04 };
-  }, [filteredZones]);
+  const currentRegion = INDIA_REGIONS[selectedCity];
 
-  useEffect(() => {
-    if (mapRef.current && focusRegion) {
-      mapRef.current.animateToRegion(focusRegion, 600);
-    }
-  }, [focusRegion]);
-
+  // Auto-refresh zone data
   useEffect(() => {
     const interval = setInterval(() => {
       setZones((prev) =>
         prev.map((zone) => {
-          const delta = (Math.random() - 0.5) * 0.2;
+          const delta = (Math.random() - 0.5) * 0.15;
           const intensity = Math.max(0.2, Math.min(1, zone.intensity + delta));
           return {
             ...zone,
@@ -118,266 +105,354 @@ const RiskZoneMapScreen = () => {
         })
       );
       setLastSynced(new Date());
-    }, 12000);
+    }, 15000);
     return () => clearInterval(interval);
   }, []);
 
-  const summary = useMemo(
-    () =>
-      (['theft', 'harassment', 'danger'] as RiskCategory[]).map((category) => {
-        const categoryZones = zones.filter((zone) => zone.category === category);
-        const peak = categoryZones.reduce((acc, zone) => Math.max(acc, zone.intensity), 0);
-        return { id: category, count: categoryZones.length, peak };
-      }),
-    [zones]
-  );
+  const handleCityChange = (city: keyof typeof INDIA_REGIONS) => {
+    setSelectedCity(city);
+    mapRef.current?.animateToRegion(INDIA_REGIONS[city], 800);
+  };
 
-  const heatPoints = useMemo<HeatPoint[]>(
-    () =>
-      filteredZones.map((zone) => ({
+  const handleZonePress = (zone: LiveRiskZone) => {
+    setSelectedZone(zone);
+    mapRef.current?.animateToRegion(
+      {
         latitude: zone.latitude,
         longitude: zone.longitude,
-        weight: Math.max(0.3, zone.intensity * 1.6),
-      })),
-    [filteredZones]
-  );
+        latitudeDelta: 0.02,
+        longitudeDelta: 0.02,
+      },
+      600
+    );
+  };
 
-  const highlightedZones = useMemo(
-    () =>
-      filteredZones
-        .slice()
-        .sort((a, b) => b.intensity - a.intensity)
-        .slice(0, 3),
-    [filteredZones]
-  );
-
-  const avgIntensity = useMemo(() => {
-    if (filteredZones.length === 0) return 0;
-    const total = filteredZones.reduce((sum, zone) => sum + zone.intensity, 0);
-    return total / filteredZones.length;
+  const stats = useMemo(() => {
+    const critical = filteredZones.filter((z) => z.intensity >= 0.75).length;
+    const high = filteredZones.filter((z) => z.intensity >= 0.5 && z.intensity < 0.75).length;
+    const avgIntensity = filteredZones.reduce((sum, z) => sum + z.intensity, 0) / (filteredZones.length || 1);
+    return { critical, high, total: filteredZones.length, avgIntensity };
   }, [filteredZones]);
-
-  const severeCount = useMemo(
-    () => filteredZones.filter((zone) => zone.intensity >= 0.75).length,
-    [filteredZones]
-  );
-
-  const topHotspot = highlightedZones[0];
-  const minutesSinceSync = Math.max(1, Math.round((Date.now() - lastSynced.getTime()) / 60000));
-  const dataConfidence = minutesSinceSync <= 3 ? 'High' : minutesSinceSync <= 6 ? 'Medium' : 'Low';
-  const fusionStats = useMemo(
-    () => [
-      { id: 'signal', label: 'Threat index', value: `${Math.round(avgIntensity * 100)}%`, hint: `${severeCount} critical` },
-      { id: 'zones', label: 'Hotspots live', value: filteredZones.length, hint: `${highlightedZones.length} tracked` },
-      { id: 'confidence', label: 'Confidence', value: dataConfidence, hint: `Synced ${formatTime(lastSynced)}` },
-    ],
-    [avgIntensity, dataConfidence, filteredZones.length, highlightedZones.length, lastSynced, severeCount]
-  );
 
   return (
     <View style={styles.container}>
-      <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
-        <View style={styles.mapShell}>
-          <LinearGradient colors={['rgba(99,102,241,0.25)', 'rgba(244,114,182,0.12)']} style={styles.mapGlow} />
-          <View style={styles.mapWrapper}>
-            <MapView
-              ref={mapRef}
-              provider={PROVIDER_DEFAULT}
-              style={StyleSheet.absoluteFillObject}
-              initialRegion={fallbackRegion}
-              customMapStyle={mapStyle}
-              showsUserLocation
-            >
-              {supportsNativeHeatmap && heatPoints.length > 0 && (
-                <Heatmap points={heatPoints} radius={45} opacity={0.85} gradient={heatmapGradient} />
-              )}
-              {!supportsNativeHeatmap &&
-                filteredZones.map((zone) =>
-                  fallbackHeatSteps.map((step, index) => (
-                    <Circle
-                      key={`${zone.id}-heat-${index}`}
-                      center={{ latitude: zone.latitude, longitude: zone.longitude }}
-                      radius={(260 + zone.intensity * 280) * step}
-                      fillColor={categoryFill(zone.category, Math.max(0.08, 0.28 - index * 0.07))}
-                      strokeColor="transparent"
-                    />
-                  ))
-                )}
-              {highlightedZones.map((zone) => (
-                <Marker key={`${zone.id}-marker`} coordinate={{ latitude: zone.latitude, longitude: zone.longitude }}>
-                  <View style={styles.markerBadge}>
-                    <Text style={styles.markerTitle}>{zone.label}</Text>
-                    <Text style={styles.markerNote}>{zone.note}</Text>
-                  </View>
-                </Marker>
+      <ScrollView
+        contentContainerStyle={styles.content}
+        showsVerticalScrollIndicator={false}
+        stickyHeaderIndices={[0]}
+      >
+        {/* Sticky Header */}
+        <View style={styles.stickyHeader}>
+          <LinearGradient colors={[Theme.colors.background, 'transparent']} style={styles.headerGradient}>
+            <View style={styles.headerTop}>
+              <View>
+                <Text style={styles.headerTitle}>Safety Map</Text>
+                <Text style={styles.headerSubtitle}>Live risk zones • India</Text>
+              </View>
+              <View style={styles.syncBadge}>
+                <View style={styles.syncDot} />
+                <Text style={styles.syncText}>Live • {formatTime(lastSynced)}</Text>
+              </View>
+            </View>
+
+            {/* City Selector */}
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.citySelector}>
+              {Object.entries(INDIA_REGIONS).map(([key, region]) => (
+                <TouchableOpacity
+                  key={key}
+                  style={[styles.cityChip, selectedCity === key && styles.cityChipActive]}
+                  onPress={() => handleCityChange(key as keyof typeof INDIA_REGIONS)}
+                >
+                  <Ionicons
+                    name="location"
+                    size={14}
+                    color={selectedCity === key ? Theme.colors.white : Theme.colors.primary}
+                  />
+                  <Text style={[styles.cityChipText, selectedCity === key && styles.cityChipTextActive]}>
+                    {region.name}
+                  </Text>
+                </TouchableOpacity>
               ))}
-            </MapView>
-            <View style={styles.mapOverlay} pointerEvents="none">
-              <View style={styles.overlayCardRow}>
-                <View style={styles.overlayCard}>
-                  <Text style={styles.overlayLabel}>Threat index</Text>
-                  <Text style={styles.overlayValue}>{Math.round(avgIntensity * 100)}%</Text>
-                  <Text style={styles.overlayMeta}>Average intensity for this filter</Text>
-                </View>
-                {topHotspot && (
-                  <View style={[styles.overlayCard, styles.overlayAlert]}>
-                    <Text style={styles.overlayLabel}>Critical focus</Text>
-                    <Text style={styles.overlayPlace}>{topHotspot.label}</Text>
-                    <Text style={styles.overlayMeta}>Updated {topHotspot.lastUpdate}</Text>
-                  </View>
-                )}
-              </View>
-              <View style={styles.overlayPills}>
-                <View style={styles.overlayPill}>
-                  <Text style={styles.overlayPillLabel}>Hotspots</Text>
-                  <Text style={styles.overlayPillValue}>{filteredZones.length}</Text>
-                </View>
-                <View style={styles.overlayPill}>
-                  <Text style={styles.overlayPillLabel}>Critical</Text>
-                  <Text style={styles.overlayPillValue}>{severeCount}</Text>
-                </View>
-                <View style={styles.overlayPill}>
-                  <Text style={styles.overlayPillLabel}>Confidence</Text>
-                  <Text style={styles.overlayPillValue}>{dataConfidence}</Text>
-                </View>
-              </View>
-            </View>
-          </View>
-          <View style={styles.providerRow}>
-            {providerLogos.map((provider) => (
-              <View key={provider.id} style={styles.providerChip}>
-                <Ionicons name={provider.icon} size={14} color={Theme.colors.primary} />
-                <Text style={styles.providerText}>{provider.label}</Text>
-              </View>
-            ))}
-          </View>
+            </ScrollView>
+
+            {/* Category Filter */}
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.filterRow}>
+              {categories.map((cat) => (
+                <TouchableOpacity
+                  key={cat.id}
+                  style={[styles.filterChip, filter === cat.id && styles.filterChipActive]}
+                  onPress={() => setFilter(cat.id)}
+                >
+                  <Ionicons
+                    name={cat.icon}
+                    size={16}
+                    color={filter === cat.id ? Theme.colors.white : cat.color}
+                  />
+                  <Text style={[styles.filterText, filter === cat.id && styles.filterTextActive]}>
+                    {cat.label}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
+          </LinearGradient>
         </View>
-        <LinearGradient colors={['#1b1c3a', '#312e81', '#4c1d95']} style={styles.heroBanner}>
-          <View style={styles.heroHeader}>
-            <View>
-              <Text style={styles.heroEyebrow}>Aro scope · city loop</Text>
-              <Text style={styles.heroTitle}>Risk fusion center</Text>
-              <Text style={styles.heroSubtitle}>Live telemetry for Connaught Place radius</Text>
-            </View>
-            <View style={styles.heroChip}>
-              <Text style={styles.heroChipText}>{filter === 'all' ? 'Citywide feed' : `${filter} focus`}</Text>
-            </View>
-          </View>
-          <View style={styles.heroMetricsRow}>
-            {fusionStats.map((metric) => (
-              <View key={metric.id} style={styles.heroMetric}>
-                <Text style={styles.heroMetricLabel}>{metric.label}</Text>
-                <Text style={styles.heroMetricValue}>{metric.value}</Text>
-                <Text style={styles.heroMetricHint}>{metric.hint}</Text>
-              </View>
-            ))}
-          </View>
-        </LinearGradient>
-        <View style={styles.header}>
-          <Text style={styles.title}>Live risk intelligence</Text>
-          <Text style={styles.subtitle}>Synced {formatTime(lastSynced)}</Text>
-        </View>
-        <View style={styles.filterRow}>
-          {categories.map((category) => (
-            <TouchableOpacity
-              key={category.id}
-              style={[styles.filterChip, filter === category.id && styles.filterChipActive]}
-              onPress={() => setFilter(category.id)}
-            >
-              <Text style={[styles.filterText, filter === category.id && styles.filterTextActive]}>
-                {category.label}
-              </Text>
-            </TouchableOpacity>
-          ))}
-        </View>
-        <View style={styles.filterMetaRow}>
-          <Text style={styles.filterMetaLabel}>Current scope</Text>
-          <View style={styles.filterMetaPill}>
-            <Text style={styles.filterMetaValue}>{filter === 'all' ? 'Citywide' : filter}</Text>
-          </View>
-          <View style={styles.filterMetaPillAlt}>
-            <Text style={styles.filterMetaValue}>{filteredZones.length} zones</Text>
-          </View>
-        </View>
-        <View style={styles.heroMetricsStrip}>
-          {fusionStats.map((metric) => (
-            <View key={`${metric.id}-strip`} style={styles.heroMetricStrip}>
-              <Text style={styles.heroMetricStripLabel}>{metric.label}</Text>
-              <Text style={styles.heroMetricStripValue}>{metric.value}</Text>
-            </View>
-          ))}
-        </View>
-        <View style={styles.legendRow}>
-          {HEAT_LEGEND.map((entry) => (
-            <View key={entry.id} style={styles.legendItem}>
-              <View style={[styles.legendSwatch, { backgroundColor: entry.color }]} />
-              <Text style={styles.legendLabel}>{entry.label}</Text>
-            </View>
-          ))}
-        </View>
-        <View style={styles.mapMetaRow}>
-          <View style={styles.mapMetaCard}>
-            <Text style={styles.mapMetaLabel}>Active hotspots</Text>
-            <Text style={styles.mapMetaValue}>{filteredZones.length}</Text>
-            <Text style={styles.mapMetaHint}>Within current filter</Text>
-          </View>
-          <View style={[styles.mapMetaCard, styles.mapMetaCardAccent]}>
-            <Text style={styles.mapMetaLabel}>Critical clusters</Text>
-            <Text style={styles.mapMetaValue}>{severeCount}</Text>
-            <Text style={styles.mapMetaHint}>{'>= 75% intensity'}</Text>
-          </View>
-          <View style={styles.mapMetaCard}>
-            <Text style={styles.mapMetaLabel}>Data confidence</Text>
-            <Text style={styles.mapMetaValue}>{dataConfidence}</Text>
-            <Text style={styles.mapMetaHint}>Synced {formatTime(lastSynced)}</Text>
-          </View>
-        </View>
-        <View style={styles.sectionHeader}>
-          <Text style={styles.sectionTitle}>Category breakdown</Text>
-          <Text style={styles.sectionHint}>Peak intensity from the live feed</Text>
-        </View>
-        <View style={styles.summaryRow}>
-          {summary.map((item) => (
-            <View key={item.id} style={styles.summaryCard}>
-              <Text style={styles.summaryLabel}>{item.id.toUpperCase()}</Text>
-              <Text style={styles.summaryValue}>{item.count}</Text>
-              <Text style={styles.summaryMeta}>Peak {(item.peak * 100).toFixed(0)}%</Text>
-            </View>
-          ))}
-        </View>
-        <View style={styles.sectionHeader}>
-          <Text style={styles.sectionTitle}>Actionable focus</Text>
-          <Text style={styles.sectionHint}>Auto-ranked by severity and recency</Text>
-        </View>
-        <View style={styles.zoneList}>
-          {highlightedZones.length > 0 ? (
-            highlightedZones.map((zone) => (
-              <View key={`${zone.id}-row`} style={styles.zoneRow}>
-                <View style={{ flex: 1 }}>
-                  <Text style={styles.zoneTitle}>{zone.label}</Text>
-                  <Text style={styles.zoneMeta}>{zone.note}</Text>
-                  <View style={styles.zoneMetaRow}>
-                    <Text style={styles.zoneUpdate}>Updated {zone.lastUpdate}</Text>
-                    <View style={[styles.zoneCategoryTag, { backgroundColor: categoryFill(zone.category, 0.18) }]}>
-                      <Text style={[styles.zoneCategoryText, { color: categoryHex[zone.category] }]}>
-                        {zone.category}
-                      </Text>
+
+        {/* Map Container */}
+        <View style={styles.mapContainer}>
+          <MapView
+            ref={mapRef}
+            style={styles.map}
+            provider={PROVIDER_DEFAULT}
+            initialRegion={currentRegion}
+            showsUserLocation
+            showsMyLocationButton={false}
+            customMapStyle={mapStyle}
+          >
+            {/* Risk Zone Circles */}
+            {filteredZones.map((zone) => {
+              const colors = categoryColors[zone.category];
+              const baseRadius = 200 + zone.intensity * 300;
+              return (
+                <React.Fragment key={zone.id}>
+                  {/* Outer glow */}
+                  <Circle
+                    center={{ latitude: zone.latitude, longitude: zone.longitude }}
+                    radius={baseRadius * 1.5}
+                    fillColor={colors.fill.replace('0.25', '0.08')}
+                    strokeWidth={0}
+                  />
+                  {/* Main circle */}
+                  <Circle
+                    center={{ latitude: zone.latitude, longitude: zone.longitude }}
+                    radius={baseRadius}
+                    fillColor={colors.fill}
+                    strokeColor={colors.stroke}
+                    strokeWidth={2}
+                  />
+                  {/* Center marker */}
+                  <Marker
+                    coordinate={{ latitude: zone.latitude, longitude: zone.longitude }}
+                    onPress={() => handleZonePress(zone)}
+                  >
+                    <View style={[styles.marker, { backgroundColor: colors.marker }]}>
+                      <Ionicons
+                        name={
+                          zone.category === 'theft'
+                            ? 'bag-remove'
+                            : zone.category === 'harassment'
+                            ? 'warning'
+                            : 'alert-circle'
+                        }
+                        size={16}
+                        color={Theme.colors.white}
+                      />
                     </View>
+                  </Marker>
+                </React.Fragment>
+              );
+            })}
+          </MapView>
+
+          {/* Map Overlay Stats */}
+          <View style={styles.mapOverlay}>
+            <View style={styles.overlayStats}>
+              <View style={styles.overlayStat}>
+                <Text style={styles.overlayStatValue}>{stats.total}</Text>
+                <Text style={styles.overlayStatLabel}>Zones</Text>
+              </View>
+              <View style={[styles.overlayStat, styles.overlayStatDanger]}>
+                <Text style={[styles.overlayStatValue, { color: Theme.colors.emergency }]}>{stats.critical}</Text>
+                <Text style={styles.overlayStatLabel}>Critical</Text>
+              </View>
+              <View style={styles.overlayStat}>
+                <Text style={[styles.overlayStatValue, { color: Theme.colors.warning }]}>{stats.high}</Text>
+                <Text style={styles.overlayStatLabel}>High</Text>
+              </View>
+            </View>
+          </View>
+
+          {/* My Location Button */}
+          <TouchableOpacity style={styles.locationButton}>
+            <Ionicons name="locate" size={22} color={Theme.colors.primary} />
+          </TouchableOpacity>
+        </View>
+
+        {/* Selected Zone Info */}
+        {selectedZone && (
+          <Card style={styles.selectedZoneCard}>
+            <View style={styles.selectedZoneHeader}>
+              <View style={[styles.selectedZoneIcon, { backgroundColor: categoryColors[selectedZone.category].fill }]}>
+                <Ionicons
+                  name={
+                    selectedZone.category === 'theft'
+                      ? 'bag-remove'
+                      : selectedZone.category === 'harassment'
+                      ? 'warning'
+                      : 'alert-circle'
+                  }
+                  size={24}
+                  color={categoryColors[selectedZone.category].marker}
+                />
+              </View>
+              <View style={styles.selectedZoneInfo}>
+                <Text style={styles.selectedZoneTitle}>{selectedZone.label}</Text>
+                <View style={styles.selectedZoneMeta}>
+                  <View
+                    style={[
+                      styles.severityBadge,
+                      { backgroundColor: severityLabel(selectedZone.intensity).color + '20' },
+                    ]}
+                  >
+                    <Text style={[styles.severityText, { color: severityLabel(selectedZone.intensity).color }]}>
+                      {severityLabel(selectedZone.intensity).label}
+                    </Text>
                   </View>
-                </View>
-                <View style={styles.zoneBadge}>
-                  <Text style={styles.zoneBadgeValue}>{Math.round(zone.intensity * 100)}%</Text>
-                  <Text style={styles.zoneBadgeLabel}>{severityLabel(zone.intensity)}</Text>
+                  <Text style={styles.categoryText}>{selectedZone.category.toUpperCase()}</Text>
                 </View>
               </View>
-            ))
-          ) : (
-            <View style={styles.emptyState}>
-              <Text style={styles.emptyStateTitle}>Map layer looks calm</Text>
-              <Text style={styles.emptyStateText}>Select All to review the full network of alerts.</Text>
+              <TouchableOpacity onPress={() => setSelectedZone(null)}>
+                <Ionicons name="close-circle" size={24} color={Theme.colors.subtleText} />
+              </TouchableOpacity>
             </View>
+            <Text style={styles.selectedZoneNote}>{selectedZone.note}</Text>
+            <View style={styles.selectedZoneFooter}>
+              <Text style={styles.selectedZoneUpdate}>Updated {selectedZone.lastUpdate}</Text>
+              <View style={styles.intensityBar}>
+                <View style={[styles.intensityFill, { width: `${selectedZone.intensity * 100}%` }]} />
+              </View>
+              <Text style={styles.intensityText}>{Math.round(selectedZone.intensity * 100)}% intensity</Text>
+            </View>
+          </Card>
+        )}
+
+        {/* Legend */}
+        <Card style={styles.legendCard}>
+          <SectionHeader title="Risk Legend" subtitle="Understanding zone colors" icon="information-circle-outline" />
+          <View style={styles.legendGrid}>
+            {categories.slice(1).map((cat) => (
+              <View key={cat.id} style={styles.legendItem}>
+                <View style={[styles.legendColor, { backgroundColor: cat.color }]} />
+                <View>
+                  <Text style={styles.legendLabel}>{cat.label}</Text>
+                  <Text style={styles.legendDesc}>
+                    {cat.id === 'theft'
+                      ? 'Pickpocket hotspots'
+                      : cat.id === 'harassment'
+                      ? 'Reported incidents'
+                      : 'Unsafe areas'}
+                  </Text>
+                </View>
+              </View>
+            ))}
+          </View>
+          <View style={styles.intensityLegend}>
+            <Text style={styles.legendSectionTitle}>Intensity Levels</Text>
+            <View style={styles.intensityLevels}>
+              <View style={styles.intensityLevel}>
+                <View style={[styles.intensityDot, { backgroundColor: Theme.colors.success }]} />
+                <Text style={styles.intensityLevelText}>Moderate (0-50%)</Text>
+              </View>
+              <View style={styles.intensityLevel}>
+                <View style={[styles.intensityDot, { backgroundColor: Theme.colors.warning }]} />
+                <Text style={styles.intensityLevelText}>High (50-75%)</Text>
+              </View>
+              <View style={styles.intensityLevel}>
+                <View style={[styles.intensityDot, { backgroundColor: Theme.colors.emergency }]} />
+                <Text style={styles.intensityLevelText}>Critical (75%+)</Text>
+              </View>
+            </View>
+          </View>
+        </Card>
+
+        {/* Zone List */}
+        <Card style={styles.zoneListCard}>
+          <SectionHeader
+            title="Active Risk Zones"
+            subtitle={`${filteredZones.length} zones in ${INDIA_REGIONS[selectedCity].name}`}
+            icon="list-outline"
+          />
+          {filteredZones.length === 0 ? (
+            <View style={styles.emptyState}>
+              <Ionicons name="shield-checkmark" size={48} color={Theme.colors.success} />
+              <Text style={styles.emptyTitle}>No risks detected</Text>
+              <Text style={styles.emptyDesc}>This area looks safe based on current data</Text>
+            </View>
+          ) : (
+            filteredZones
+              .sort((a, b) => b.intensity - a.intensity)
+              .map((zone) => {
+                const severity = severityLabel(zone.intensity);
+                const colors = categoryColors[zone.category];
+                return (
+                  <TouchableOpacity
+                    key={zone.id}
+                    style={styles.zoneItem}
+                    onPress={() => handleZonePress(zone)}
+                    activeOpacity={0.7}
+                  >
+                    <View style={[styles.zoneIcon, { backgroundColor: colors.fill }]}>
+                      <Ionicons
+                        name={
+                          zone.category === 'theft'
+                            ? 'bag-remove'
+                            : zone.category === 'harassment'
+                            ? 'warning'
+                            : 'alert-circle'
+                        }
+                        size={20}
+                        color={colors.marker}
+                      />
+                    </View>
+                    <View style={styles.zoneContent}>
+                      <Text style={styles.zoneTitle}>{zone.label}</Text>
+                      <Text style={styles.zoneNote} numberOfLines={1}>
+                        {zone.note}
+                      </Text>
+                      <View style={styles.zoneMeta}>
+                        <Text style={styles.zoneUpdate}>Updated {zone.lastUpdate}</Text>
+                        <View style={[styles.categoryTag, { backgroundColor: colors.fill }]}>
+                          <Text style={[styles.categoryTagText, { color: colors.marker }]}>
+                            {zone.category}
+                          </Text>
+                        </View>
+                      </View>
+                    </View>
+                    <View style={styles.zoneSeverity}>
+                      <Text style={[styles.zoneSeverityValue, { color: severity.color }]}>
+                        {Math.round(zone.intensity * 100)}%
+                      </Text>
+                      <Text style={[styles.zoneSeverityLabel, { color: severity.color }]}>{severity.label}</Text>
+                    </View>
+                  </TouchableOpacity>
+                );
+              })
           )}
-        </View>
+        </Card>
+
+        {/* Safety Tips */}
+        <Card style={styles.tipsCard}>
+          <SectionHeader title="Stay Safe" subtitle="Tips for navigating risk zones" icon="bulb-outline" />
+          <View style={styles.tipsList}>
+            <View style={styles.tipItem}>
+              <Ionicons name="eye" size={20} color={Theme.colors.primary} />
+              <Text style={styles.tipText}>Stay aware of your surroundings in marked zones</Text>
+            </View>
+            <View style={styles.tipItem}>
+              <Ionicons name="people" size={20} color={Theme.colors.primary} />
+              <Text style={styles.tipText}>Travel in groups during evening hours</Text>
+            </View>
+            <View style={styles.tipItem}>
+              <Ionicons name="bag-check" size={20} color={Theme.colors.primary} />
+              <Text style={styles.tipText}>Keep valuables secure and out of sight</Text>
+            </View>
+            <View style={styles.tipItem}>
+              <Ionicons name="call" size={20} color={Theme.colors.primary} />
+              <Text style={styles.tipText}>Save emergency numbers: 100 (Police), 112 (Emergency)</Text>
+            </View>
+          </View>
+        </Card>
+
+        <View style={{ height: TAB_BAR_OVERLAY_HEIGHT + Theme.spacing.xl }} />
       </ScrollView>
     </View>
   );
@@ -389,629 +464,407 @@ const styles = StyleSheet.create({
     backgroundColor: Theme.colors.background,
   },
   content: {
+    gap: Theme.spacing.md,
+  },
+  stickyHeader: {
+    backgroundColor: Theme.colors.background,
+    zIndex: 10,
+  },
+  headerGradient: {
     padding: Theme.spacing.md,
-    gap: Theme.spacing.md,
-    paddingBottom: Theme.spacing.xl + TAB_BAR_OVERLAY_HEIGHT,
-  },
-  mapShell: {
-    position: 'relative',
-    marginBottom: Theme.spacing.md,
-    padding: Theme.spacing.xs,
-    borderRadius: Theme.radius.xl,
-  },
-  mapGlow: {
-    position: 'absolute',
-    top: 0,
-    bottom: 0,
-    left: 0,
-    right: 0,
-    borderRadius: Theme.radius.xl,
-    opacity: 0.7,
-  },
-  heroBanner: {
-    borderRadius: Theme.radius.xl,
-    padding: Theme.spacing.lg,
+    paddingTop: Theme.spacing.lg,
     gap: Theme.spacing.md,
   },
-  heroHeader: {
+  headerTop: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'flex-start',
-    gap: Theme.spacing.md,
   },
-  heroEyebrow: {
-    color: 'rgba(255,255,255,0.7)',
-    textTransform: 'uppercase',
-    letterSpacing: 1,
-    fontSize: Theme.font.size.xs,
-    fontFamily: Theme.font.family.sansBold,
-  },
-  heroTitle: {
-    color: Theme.colors.white,
-    fontFamily: Theme.font.family.sansBold,
+  headerTitle: {
     fontSize: Theme.font.size.xl,
+    fontWeight: '700',
+    color: Theme.colors.text,
   },
-  heroSubtitle: {
-    color: 'rgba(255,255,255,0.8)',
-    fontFamily: Theme.font.family.sans,
-    marginTop: 4,
-  },
-  heroChip: {
-    borderRadius: Theme.radius.full,
-    paddingHorizontal: Theme.spacing.md,
-    paddingVertical: Theme.spacing.xs,
-    backgroundColor: 'rgba(255,255,255,0.15)',
-  },
-  heroChipText: {
-    color: Theme.colors.white,
-    fontFamily: Theme.font.family.sansBold,
+  headerSubtitle: {
+    color: Theme.colors.subtleText,
     fontSize: Theme.font.size.sm,
   },
-  heroMetricsRow: {
-    flexDirection: 'row',
-    gap: Theme.spacing.md,
-    flexWrap: 'wrap',
-  },
-  heroMetric: {
-    flex: 1,
-    minWidth: 120,
-    backgroundColor: 'rgba(255,255,255,0.08)',
-    borderRadius: Theme.radius.lg,
-    padding: Theme.spacing.md,
-  },
-  heroMetricLabel: {
-    color: 'rgba(255,255,255,0.8)',
-    fontFamily: Theme.font.family.sans,
-    fontSize: Theme.font.size.sm,
-  },
-  heroMetricValue: {
-    color: Theme.colors.white,
-    fontFamily: Theme.font.family.sansBold,
-    fontSize: Theme.font.size.lg,
-    marginTop: 4,
-  },
-  heroMetricHint: {
-    color: 'rgba(255,255,255,0.7)',
-    fontFamily: Theme.font.family.sans,
-    marginTop: 2,
-  },
-  header: {
-    gap: 2,
-  },
-  title: {
-    fontFamily: Theme.font.family.sansBold,
-    fontSize: Theme.font.size.lg,
-    color: Theme.colors.text,
-  },
-  subtitle: {
-    fontFamily: Theme.font.family.sans,
-    color: Theme.colors.subtleText,
-  },
-  filterRow: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: Theme.spacing.sm,
-  },
-  filterChip: {
-    paddingHorizontal: Theme.spacing.md,
-    paddingVertical: Theme.spacing.xs,
-    borderRadius: Theme.radius.full,
-    borderWidth: 1,
-    borderColor: 'rgba(15,23,42,0.1)',
-  },
-  filterChipActive: {
-    backgroundColor: 'rgba(0,191,165,0.12)',
-    borderColor: Theme.colors.primary,
-  },
-  filterText: {
-    fontFamily: Theme.font.family.sansBold,
-    color: Theme.colors.subtleText,
-  },
-  filterTextActive: {
-    color: Theme.colors.primary,
-  },
-  filterMetaRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: Theme.spacing.sm,
-  },
-  filterMetaLabel: {
-    fontFamily: Theme.font.family.sans,
-    color: Theme.colors.subtleText,
-  },
-  filterMetaPill: {
-    borderRadius: Theme.radius.full,
-    paddingHorizontal: Theme.spacing.sm,
-    paddingVertical: Theme.spacing.xs,
-    backgroundColor: 'rgba(91,33,182,0.12)',
-  },
-  filterMetaPillAlt: {
-    borderRadius: Theme.radius.full,
-    paddingHorizontal: Theme.spacing.sm,
-    paddingVertical: Theme.spacing.xs,
-    backgroundColor: 'rgba(0,191,165,0.15)',
-  },
-  filterMetaValue: {
-    fontFamily: Theme.font.family.sansBold,
-    color: Theme.colors.text,
-  },
-  heroMetricsStrip: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: Theme.spacing.sm,
-  },
-  heroMetricStrip: {
-    flex: 1,
-    minWidth: 120,
-    backgroundColor: Theme.colors.white,
-    borderRadius: Theme.radius.lg,
-    padding: Theme.spacing.sm,
-    borderWidth: 1,
-    borderColor: 'rgba(15,23,42,0.05)',
-  },
-  heroMetricStripLabel: {
-    fontFamily: Theme.font.family.sans,
-    color: Theme.colors.subtleText,
-    fontSize: Theme.font.size.xs,
-  },
-  heroMetricStripValue: {
-    fontFamily: Theme.font.family.sansBold,
-    color: Theme.colors.text,
-    fontSize: Theme.font.size.md,
-  },
-  mapWrapper: {
-    height: mapHeight,
-    borderRadius: Theme.radius.lg,
-    overflow: 'hidden',
-    borderWidth: 1,
-    borderColor: 'rgba(15,23,42,0.08)',
-    backgroundColor: Theme.colors.white,
-    position: 'relative',
-    shadowColor: '#1e1b4b',
-    shadowOpacity: 0.1,
-    shadowRadius: 24,
-    shadowOffset: { width: 0, height: 20 },
-    elevation: 8,
-  },
-  providerRow: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: Theme.spacing.sm,
-    paddingHorizontal: Theme.spacing.sm,
-    paddingTop: Theme.spacing.sm,
-  },
-  providerChip: {
+  syncBadge: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: Theme.spacing.xs,
-    borderRadius: Theme.radius.full,
+    backgroundColor: Theme.colors.successBg,
     paddingHorizontal: Theme.spacing.sm,
     paddingVertical: 4,
-    backgroundColor: 'rgba(37,99,235,0.1)',
+    borderRadius: Theme.radius.full,
   },
-  providerText: {
-    fontFamily: Theme.font.family.sansBold,
+  syncDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: Theme.colors.success,
+  },
+  syncText: {
+    color: Theme.colors.success,
+    fontSize: Theme.font.size.xs,
+    fontWeight: '600',
+  },
+  citySelector: {
+    flexGrow: 0,
+  },
+  cityChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Theme.spacing.xs,
+    paddingHorizontal: Theme.spacing.md,
+    paddingVertical: Theme.spacing.sm,
+    borderRadius: Theme.radius.full,
+    backgroundColor: 'rgba(30, 64, 175, 0.1)',
+    marginRight: Theme.spacing.sm,
+  },
+  cityChipActive: {
+    backgroundColor: Theme.colors.primary,
+  },
+  cityChipText: {
     color: Theme.colors.primary,
+    fontWeight: '600',
+    fontSize: Theme.font.size.sm,
+  },
+  cityChipTextActive: {
+    color: Theme.colors.white,
+  },
+  filterRow: {
+    flexGrow: 0,
+  },
+  filterChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Theme.spacing.xs,
+    paddingHorizontal: Theme.spacing.md,
+    paddingVertical: Theme.spacing.sm,
+    borderRadius: Theme.radius.full,
+    backgroundColor: Theme.colors.card,
+    marginRight: Theme.spacing.sm,
+    borderWidth: 1,
+    borderColor: Theme.colors.border,
+  },
+  filterChipActive: {
+    backgroundColor: Theme.colors.text,
+    borderColor: Theme.colors.text,
+  },
+  filterText: {
+    color: Theme.colors.text,
+    fontWeight: '600',
+    fontSize: Theme.font.size.sm,
+  },
+  filterTextActive: {
+    color: Theme.colors.white,
+  },
+  mapContainer: {
+    marginHorizontal: Theme.spacing.md,
+    height: mapHeight,
+    borderRadius: Theme.radius.xl,
+    overflow: 'hidden',
+    ...Theme.shadows.lg,
+  },
+  map: {
+    flex: 1,
+  },
+  marker: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 2,
+    borderColor: Theme.colors.white,
+    ...Theme.shadows.md,
+  },
+  mapOverlay: {
+    position: 'absolute',
+    top: Theme.spacing.sm,
+    left: Theme.spacing.sm,
+    right: Theme.spacing.sm,
+  },
+  overlayStats: {
+    flexDirection: 'row',
+    gap: Theme.spacing.sm,
+  },
+  overlayStat: {
+    backgroundColor: 'rgba(255, 255, 255, 0.95)',
+    paddingHorizontal: Theme.spacing.md,
+    paddingVertical: Theme.spacing.sm,
+    borderRadius: Theme.radius.lg,
+    alignItems: 'center',
+    ...Theme.shadows.sm,
+  },
+  overlayStatDanger: {
+    backgroundColor: Theme.colors.emergencyBg,
+  },
+  overlayStatValue: {
+    fontSize: Theme.font.size.lg,
+    fontWeight: '700',
+    color: Theme.colors.text,
+  },
+  overlayStatLabel: {
+    fontSize: Theme.font.size.xs,
+    color: Theme.colors.subtleText,
+  },
+  locationButton: {
+    position: 'absolute',
+    bottom: Theme.spacing.md,
+    right: Theme.spacing.md,
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: Theme.colors.white,
+    justifyContent: 'center',
+    alignItems: 'center',
+    ...Theme.shadows.md,
+  },
+  selectedZoneCard: {
+    marginHorizontal: Theme.spacing.md,
+    gap: Theme.spacing.md,
+    borderLeftWidth: 4,
+    borderLeftColor: Theme.colors.warning,
+  },
+  selectedZoneHeader: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: Theme.spacing.md,
+  },
+  selectedZoneIcon: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  selectedZoneInfo: {
+    flex: 1,
+  },
+  selectedZoneTitle: {
+    fontSize: Theme.font.size.lg,
+    fontWeight: '700',
+    color: Theme.colors.text,
+  },
+  selectedZoneMeta: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Theme.spacing.sm,
+    marginTop: 4,
+  },
+  severityBadge: {
+    paddingHorizontal: Theme.spacing.sm,
+    paddingVertical: 2,
+    borderRadius: Theme.radius.full,
+  },
+  severityText: {
+    fontSize: Theme.font.size.xs,
+    fontWeight: '700',
+  },
+  categoryText: {
+    fontSize: Theme.font.size.xs,
+    color: Theme.colors.subtleText,
+    fontWeight: '600',
+  },
+  selectedZoneNote: {
+    color: Theme.colors.textSecondary,
+    lineHeight: 20,
+  },
+  selectedZoneFooter: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Theme.spacing.sm,
+  },
+  selectedZoneUpdate: {
+    color: Theme.colors.subtleText,
     fontSize: Theme.font.size.xs,
   },
-  legendRow: {
+  intensityBar: {
+    flex: 1,
+    height: 6,
+    backgroundColor: Theme.colors.lightGray,
+    borderRadius: 3,
+    overflow: 'hidden',
+  },
+  intensityFill: {
+    height: '100%',
+    backgroundColor: Theme.colors.warning,
+    borderRadius: 3,
+  },
+  intensityText: {
+    fontSize: Theme.font.size.xs,
+    fontWeight: '600',
+    color: Theme.colors.text,
+  },
+  legendCard: {
+    marginHorizontal: Theme.spacing.md,
+    gap: Theme.spacing.md,
+  },
+  legendGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: Theme.spacing.sm,
-    backgroundColor: Theme.colors.white,
-    borderRadius: Theme.radius.lg,
-    padding: Theme.spacing.sm,
+    gap: Theme.spacing.md,
   },
   legendItem: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: Theme.spacing.xs,
+    gap: Theme.spacing.sm,
+    minWidth: '45%',
   },
-  legendSwatch: {
-    width: 16,
-    height: 16,
-    borderRadius: 8,
+  legendColor: {
+    width: 24,
+    height: 24,
+    borderRadius: 12,
   },
   legendLabel: {
-    fontFamily: Theme.font.family.sans,
+    fontWeight: '600',
+    color: Theme.colors.text,
+  },
+  legendDesc: {
+    fontSize: Theme.font.size.xs,
     color: Theme.colors.subtleText,
   },
-  mapOverlay: {
-    position: 'absolute',
-    left: 0,
-    right: 0,
-    top: 0,
-    padding: Theme.spacing.md,
-    gap: Theme.spacing.sm,
+  intensityLegend: {
+    borderTopWidth: 1,
+    borderTopColor: Theme.colors.border,
+    paddingTop: Theme.spacing.md,
   },
-  overlayCardRow: {
+  legendSectionTitle: {
+    fontWeight: '600',
+    color: Theme.colors.text,
+    marginBottom: Theme.spacing.sm,
+  },
+  intensityLevels: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: Theme.spacing.sm,
+    gap: Theme.spacing.md,
   },
-  overlayCard: {
-    flex: 1,
-    backgroundColor: 'rgba(15,23,42,0.78)',
-    borderRadius: Theme.radius.md,
-    padding: Theme.spacing.sm,
-    gap: 4,
-    minWidth: 140,
-  },
-  overlayAlert: {
-    backgroundColor: 'rgba(244,67,54,0.85)',
-  },
-  overlayLabel: {
-    fontFamily: Theme.font.family.sansBold,
-    color: Theme.colors.white,
-    fontSize: Theme.font.size.xs,
-    textTransform: 'uppercase',
-    opacity: 0.8,
-  },
-  overlayValue: {
-    fontFamily: Theme.font.family.sansBold,
-    color: Theme.colors.white,
-    fontSize: Theme.font.size.xl,
-  },
-  overlayPlace: {
-    fontFamily: Theme.font.family.sansBold,
-    color: Theme.colors.white,
-    fontSize: Theme.font.size.md,
-  },
-  overlayMeta: {
-    fontFamily: Theme.font.family.sans,
-    color: Theme.colors.white,
-    opacity: 0.85,
-    fontSize: Theme.font.size.xs,
-  },
-  overlayPills: {
+  intensityLevel: {
     flexDirection: 'row',
-    flexWrap: 'wrap',
+    alignItems: 'center',
     gap: Theme.spacing.xs,
   },
-  overlayPill: {
-    flexDirection: 'row',
+  intensityDot: {
+    width: 12,
+    height: 12,
+    borderRadius: 6,
+  },
+  intensityLevelText: {
+    fontSize: Theme.font.size.sm,
+    color: Theme.colors.subtleText,
+  },
+  zoneListCard: {
+    marginHorizontal: Theme.spacing.md,
+    gap: Theme.spacing.md,
+  },
+  emptyState: {
     alignItems: 'center',
-    gap: 6,
-    backgroundColor: 'rgba(255,255,255,0.9)',
-    borderRadius: Theme.radius.full,
-    paddingHorizontal: Theme.spacing.sm,
-    paddingVertical: 4,
-  },
-  overlayPillLabel: {
-    fontFamily: Theme.font.family.sans,
-    color: Theme.colors.subtleText,
-    fontSize: Theme.font.size.xs,
-  },
-  overlayPillValue: {
-    fontFamily: Theme.font.family.sansBold,
-    color: Theme.colors.text,
-  },
-  mapMetaRow: {
-    flexDirection: 'row',
-    gap: Theme.spacing.md,
-    flexWrap: 'wrap',
-  },
-  mapMetaCard: {
-    flex: 1,
-    minWidth: 120,
-    borderRadius: Theme.radius.lg,
-    borderWidth: 1,
-    borderColor: 'rgba(15,23,42,0.08)',
-    padding: Theme.spacing.md,
-    gap: 2,
-  },
-  mapMetaCardAccent: {
-    backgroundColor: 'rgba(244,63,94,0.08)',
-    borderColor: 'rgba(244,63,94,0.32)',
-  },
-  mapMetaLabel: {
-    fontFamily: Theme.font.family.sansBold,
-    color: Theme.colors.subtleText,
-    fontSize: Theme.font.size.xs,
-    textTransform: 'uppercase',
-  },
-  mapMetaValue: {
-    fontFamily: Theme.font.family.sansBold,
-    color: Theme.colors.text,
-    fontSize: Theme.font.size.lg,
-  },
-  mapMetaHint: {
-    fontFamily: Theme.font.family.sans,
-    color: Theme.colors.subtleText,
-    fontSize: Theme.font.size.xs,
-  },
-  sectionHeader: {
-    gap: 2,
-  },
-  sectionTitle: {
-    fontFamily: Theme.font.family.sansBold,
-    color: Theme.colors.text,
-  },
-  sectionHint: {
-    fontFamily: Theme.font.family.sans,
-    color: Theme.colors.subtleText,
-    fontSize: Theme.font.size.sm,
-  },
-  summaryRow: {
-    flexDirection: 'row',
-    gap: Theme.spacing.md,
-  },
-  summaryCard: {
-    flex: 1,
-    borderRadius: Theme.radius.lg,
-    borderWidth: 1,
-    borderColor: 'rgba(15,23,42,0.08)',
-    padding: Theme.spacing.md,
-    gap: 4,
-  },
-  summaryLabel: {
-    fontFamily: Theme.font.family.sansBold,
-    color: Theme.colors.subtleText,
-  },
-  summaryValue: {
-    fontFamily: Theme.font.family.sansBold,
-    color: Theme.colors.text,
-    fontSize: Theme.font.size.xl,
-  },
-  summaryMeta: {
-    fontFamily: Theme.font.family.sans,
-    color: Theme.colors.subtleText,
-    fontSize: Theme.font.size.sm,
-  },
-  zoneList: {
+    padding: Theme.spacing.xl,
     gap: Theme.spacing.sm,
   },
-  zoneRow: {
+  emptyTitle: {
+    fontSize: Theme.font.size.lg,
+    fontWeight: '700',
+    color: Theme.colors.text,
+  },
+  emptyDesc: {
+    color: Theme.colors.subtleText,
+    textAlign: 'center',
+  },
+  zoneItem: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: Theme.spacing.md,
-    borderWidth: 1,
-    borderColor: 'rgba(15,23,42,0.08)',
-    borderRadius: Theme.radius.lg,
     padding: Theme.spacing.md,
+    backgroundColor: Theme.colors.backgroundSecondary,
+    borderRadius: Theme.radius.lg,
+  },
+  zoneIcon: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  zoneContent: {
+    flex: 1,
   },
   zoneTitle: {
-    fontFamily: Theme.font.family.sansBold,
+    fontWeight: '600',
     color: Theme.colors.text,
   },
-  zoneMeta: {
-    fontFamily: Theme.font.family.sans,
+  zoneNote: {
     color: Theme.colors.subtleText,
+    fontSize: Theme.font.size.sm,
     marginTop: 2,
   },
-  zoneMetaRow: {
+  zoneMeta: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: Theme.spacing.sm,
     marginTop: 4,
   },
   zoneUpdate: {
-    fontFamily: Theme.font.family.sans,
-    color: Theme.colors.primary,
-    marginTop: 0,
     fontSize: Theme.font.size.xs,
+    color: Theme.colors.mutedText,
   },
-  zoneCategoryTag: {
-    borderRadius: Theme.radius.full,
-    paddingHorizontal: Theme.spacing.sm,
+  categoryTag: {
+    paddingHorizontal: Theme.spacing.xs,
     paddingVertical: 2,
+    borderRadius: Theme.radius.xs,
   },
-  zoneCategoryText: {
-    fontFamily: Theme.font.family.sansBold,
+  categoryTagText: {
     fontSize: Theme.font.size.xs,
+    fontWeight: '600',
     textTransform: 'capitalize',
   },
-  zoneBadge: {
-    alignItems: 'center',
-    backgroundColor: 'rgba(0,191,165,0.1)',
-    paddingHorizontal: Theme.spacing.sm,
-    paddingVertical: Theme.spacing.xs,
-    borderRadius: Theme.radius.md,
+  zoneSeverity: {
+    alignItems: 'flex-end',
   },
-  zoneBadgeValue: {
-    fontFamily: Theme.font.family.sansBold,
-    color: Theme.colors.primary,
+  zoneSeverityValue: {
     fontSize: Theme.font.size.lg,
+    fontWeight: '700',
   },
-  zoneBadgeLabel: {
-    fontFamily: Theme.font.family.sans,
-    color: Theme.colors.primary,
+  zoneSeverityLabel: {
     fontSize: Theme.font.size.xs,
+    fontWeight: '500',
   },
-  emptyState: {
-    borderWidth: 1,
-    borderColor: 'rgba(15,23,42,0.08)',
-    borderRadius: Theme.radius.lg,
-    padding: Theme.spacing.lg,
-    alignItems: 'center',
-    gap: 4,
+  tipsCard: {
+    marginHorizontal: Theme.spacing.md,
+    gap: Theme.spacing.md,
   },
-  emptyStateTitle: {
-    fontFamily: Theme.font.family.sansBold,
-    color: Theme.colors.text,
+  tipsList: {
+    gap: Theme.spacing.md,
   },
-  emptyStateText: {
-    fontFamily: Theme.font.family.sans,
-    color: Theme.colors.subtleText,
-    fontSize: Theme.font.size.sm,
-    textAlign: 'center',
+  tipItem: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: Theme.spacing.md,
   },
-  markerBadge: {
-    backgroundColor: Theme.colors.white,
-    padding: 8,
-    borderRadius: Theme.radius.md,
-    maxWidth: 160,
-  },
-  markerTitle: {
-    fontFamily: Theme.font.family.sansBold,
-    color: Theme.colors.text,
-  },
-  markerNote: {
-    fontFamily: Theme.font.family.sans,
-    color: Theme.colors.subtleText,
-    fontSize: Theme.font.size.xs,
+  tipText: {
+    flex: 1,
+    color: Theme.colors.textSecondary,
+    lineHeight: 20,
   },
 });
 
+// Cleaner map style for India
 const mapStyle = [
-  {
-    elementType: 'geometry',
-    stylers: [
-      {
-        color: '#f5f5f5',
-      },
-    ],
-  },
-  {
-    elementType: 'labels.icon',
-    stylers: [
-      {
-        visibility: 'off',
-      },
-    ],
-  },
-  {
-    elementType: 'labels.text.fill',
-    stylers: [
-      {
-        color: '#616161',
-      },
-    ],
-  },
-  {
-    elementType: 'labels.text.stroke',
-    stylers: [
-      {
-        color: '#f5f5f5',
-      },
-    ],
-  },
-  {
-    featureType: 'administrative.land_parcel',
-    elementType: 'labels.text.fill',
-    stylers: [
-      {
-        color: '#bdbdbd',
-      },
-    ],
-  },
-  {
-    featureType: 'poi',
-    elementType: 'geometry',
-    stylers: [
-      {
-        color: '#eeeeee',
-      },
-    ],
-  },
-  {
-    featureType: 'poi',
-    elementType: 'labels.text.fill',
-    stylers: [
-      {
-        color: '#757575',
-      },
-    ],
-  },
-  {
-    featureType: 'poi.park',
-    elementType: 'geometry',
-    stylers: [
-      {
-        color: '#e5e5e5',
-      },
-    ],
-  },
-  {
-    featureType: 'poi.park',
-    elementType: 'labels.text.fill',
-    stylers: [
-      {
-        color: '#9e9e9e',
-      },
-    ],
-  },
-  {
-    featureType: 'road',
-    elementType: 'geometry',
-    stylers: [
-      {
-        color: '#ffffff',
-      },
-    ],
-  },
-  {
-    featureType: 'road.arterial',
-    elementType: 'labels.text.fill',
-    stylers: [
-      {
-        color: '#757575',
-      },
-    ],
-  },
-  {
-    featureType: 'road.highway',
-    elementType: 'geometry',
-    stylers: [
-      {
-        color: '#dadada',
-      },
-    ],
-  },
-  {
-    featureType: 'road.highway',
-    elementType: 'labels.text.fill',
-    stylers: [
-      {
-        color: '#616161',
-      },
-    ],
-  },
-  {
-    featureType: 'road.local',
-    elementType: 'labels.text.fill',
-    stylers: [
-      {
-        color: '#9e9e9e',
-      },
-    ],
-  },
-  {
-    featureType: 'transit.line',
-    elementType: 'geometry',
-    stylers: [
-      {
-        color: '#e5e5e5',
-      },
-    ],
-  },
-  {
-    featureType: 'transit.station',
-    elementType: 'geometry',
-    stylers: [
-      {
-        color: '#eeeeee',
-      },
-    ],
-  },
-  {
-    featureType: 'water',
-    elementType: 'geometry',
-    stylers: [
-      {
-        color: '#c9c9c9',
-      },
-    ],
-  },
-  {
-    featureType: 'water',
-    elementType: 'labels.text.fill',
-    stylers: [
-      {
-        color: '#9e9e9e',
-      },
-    ],
-  },
+  { elementType: 'geometry', stylers: [{ color: '#f5f5f5' }] },
+  { elementType: 'labels.icon', stylers: [{ visibility: 'simplified' }] },
+  { elementType: 'labels.text.fill', stylers: [{ color: '#616161' }] },
+  { elementType: 'labels.text.stroke', stylers: [{ color: '#f5f5f5' }] },
+  { featureType: 'administrative.land_parcel', elementType: 'labels.text.fill', stylers: [{ color: '#bdbdbd' }] },
+  { featureType: 'poi', elementType: 'geometry', stylers: [{ color: '#eeeeee' }] },
+  { featureType: 'poi', elementType: 'labels.text.fill', stylers: [{ color: '#757575' }] },
+  { featureType: 'poi.park', elementType: 'geometry', stylers: [{ color: '#e5e5e5' }] },
+  { featureType: 'road', elementType: 'geometry', stylers: [{ color: '#ffffff' }] },
+  { featureType: 'road.arterial', elementType: 'labels.text.fill', stylers: [{ color: '#757575' }] },
+  { featureType: 'road.highway', elementType: 'geometry', stylers: [{ color: '#dadada' }] },
+  { featureType: 'water', elementType: 'geometry', stylers: [{ color: '#c9c9c9' }] },
+  { featureType: 'water', elementType: 'labels.text.fill', stylers: [{ color: '#9e9e9e' }] },
 ];
 
 export default RiskZoneMapScreen;
