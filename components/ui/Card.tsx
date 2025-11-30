@@ -1,22 +1,27 @@
-// UI Revamp - New Card component
 import React from 'react';
-import { View, StyleSheet, ViewProps } from 'react-native';
-import { Theme } from '@/constants/theme';
+import { View, StyleSheet, ViewStyle, StyleProp } from 'react-native';
+import { Theme } from '../../constants/theme';
 
-type CardProps = ViewProps & {
+type CardProps = {
   children: React.ReactNode;
-  radius?: 'md' | 'lg' | 'xl';
+  style?: StyleProp<ViewStyle>;
+  radius?: 'sm' | 'md' | 'lg' | 'xl';
+  variant?: 'default' | 'elevated' | 'outlined';
 };
 
-const radiusMap = {
-  md: Theme.radius.md,
-  lg: Theme.radius.lg,
-  xl: Theme.radius.xl,
-} as const;
+const Card: React.FC<CardProps> = ({ children, style, radius = 'lg', variant = 'default' }) => {
+  const radiusValue = Theme.radius[radius];
 
-const Card: React.FC<CardProps> = ({ children, style, radius = 'lg', ...props }) => {
   return (
-    <View style={[styles.card, { borderRadius: radiusMap[radius] }, style]} {...props}>
+    <View
+      style={[
+        styles.card,
+        { borderRadius: radiusValue },
+        variant === 'elevated' && styles.elevated,
+        variant === 'outlined' && styles.outlined,
+        style,
+      ]}
+    >
       {children}
     </View>
   );
@@ -26,13 +31,16 @@ const styles = StyleSheet.create({
   card: {
     backgroundColor: Theme.colors.card,
     padding: Theme.spacing.md,
+    ...Theme.shadows.sm,
+  },
+  elevated: {
+    ...Theme.shadows.lg,
+  },
+  outlined: {
+    shadowOpacity: 0,
+    elevation: 0,
     borderWidth: 1,
-    borderColor: 'rgba(18,24,38,0.04)',
-    shadowColor: '#0f172a',
-    shadowOffset: { width: 0, height: 16 },
-    shadowOpacity: 0.08,
-    shadowRadius: 24,
-    elevation: 3,
+    borderColor: Theme.colors.border,
   },
 });
 

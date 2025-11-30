@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { Animated, Pressable, StyleSheet, Text, View } from 'react-native';
-import { Theme } from '@/constants/theme';
+import { Ionicons } from '@expo/vector-icons';
+import { Theme } from '../../constants/theme';
 
 type Props = {
   label: string;
@@ -61,15 +62,25 @@ const PanicSlider: React.FC<Props> = ({ label, onActivate, duration = 2200 }) =>
     outputRange: ['0%', '100%'],
   });
 
-  const textColor = completed || isPressing ? Theme.colors.white : Theme.colors.text;
+  const backgroundColor = progress.interpolate({
+    inputRange: [0, 0.5, 1],
+    outputRange: ['rgba(220, 38, 38, 0.1)', 'rgba(220, 38, 38, 0.5)', Theme.colors.emergency],
+  });
 
   return (
     <Pressable onPressIn={handlePressIn} onPressOut={handlePressOut} style={styles.pressable}>
       <View style={styles.track}>
-        <Animated.View style={[styles.fill, { width: widthInterpolation }]} />
-        <Text style={[styles.text, { color: textColor }]}>
-          {completed ? 'SOS dispatched' : isPressing ? 'Keep holding…' : label}
-        </Text>
+        <Animated.View style={[styles.fill, { width: widthInterpolation, backgroundColor }]} />
+        <View style={styles.content}>
+          <Ionicons
+            name={completed ? 'checkmark-circle' : isPressing ? 'time' : 'alert-circle'}
+            size={24}
+            color={isPressing || completed ? Theme.colors.white : Theme.colors.emergency}
+          />
+          <Text style={[styles.text, (isPressing || completed) && styles.textActive]}>
+            {completed ? 'SOS Dispatched!' : isPressing ? 'Keep holding...' : label}
+          </Text>
+        </View>
       </View>
     </Pressable>
   );
@@ -80,20 +91,31 @@ const styles = StyleSheet.create({
     width: '100%',
   },
   track: {
-    height: 56,
-    borderRadius: Theme.radius.full,
-    backgroundColor: 'rgba(15,23,42,0.08)',
+    height: 60,
+    borderRadius: Theme.radius.lg,
+    backgroundColor: Theme.colors.emergencyBg,
     overflow: 'hidden',
     justifyContent: 'center',
-    alignItems: 'center',
+    borderWidth: 2,
+    borderColor: Theme.colors.emergency,
   },
   fill: {
     ...StyleSheet.absoluteFillObject,
-    backgroundColor: Theme.colors.danger,
+  },
+  content: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: Theme.spacing.sm,
+    zIndex: 1,
   },
   text: {
-    fontFamily: Theme.font.family.sansBold,
-    zIndex: 1,
+    fontWeight: '700',
+    fontSize: Theme.font.size.md,
+    color: Theme.colors.emergency,
+  },
+  textActive: {
+    color: Theme.colors.white,
   },
 });
 
