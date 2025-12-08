@@ -1,12 +1,12 @@
 // UI Revamp – new Report Incident screen layout and styles.
 import { useRouter } from 'expo-router';
 import React, { useState } from 'react';
-import { Text, TextInput, StyleSheet, ScrollView } from 'react-native';
-import { Theme } from '../../constants/theme';
-import { useAppStore } from '../../src/store/use-app-store';
-import Screen from '../../components/ui/Screen'; // UI Revamp - Use new Screen component
+import { ScrollView, StyleSheet, Text, TextInput } from 'react-native';
 import AppButton from '../../components/ui/AppButton'; // UI Revamp - Use new AppButton component
 import Card from '../../components/ui/Card'; // UI Revamp - Use new Card component
+import Screen from '../../components/ui/Screen'; // UI Revamp - Use new Screen component
+import { Theme } from '../../constants/theme';
+import { useAppStore } from '../../src/store/use-app-store';
 
 const ReportIncidentScreen = () => {
   const router = useRouter();

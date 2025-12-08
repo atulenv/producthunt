@@ -1,12 +1,12 @@
-import React, { useMemo, useState } from 'react';
-import { View, Text, StyleSheet, TextInput, ScrollView, TouchableOpacity, Alert } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import React, { useMemo, useState } from 'react';
+import { Alert, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import AppButton from '../../components/ui/AppButton';
+import Card from '../../components/ui/Card';
+import MapPreview from '../../components/ui/MapPreview';
 import Screen from '../../components/ui/Screen';
 import SectionHeader from '../../components/ui/SectionHeader';
-import Card from '../../components/ui/Card';
 import { Theme } from '../../constants/theme';
-import AppButton from '../../components/ui/AppButton';
-import MapPreview from '../../components/ui/MapPreview';
 import { useAppStore } from '../../src/store/use-app-store';
 
 const categories = ['theft', 'harassment', 'danger', 'unsafe-feeling', 'other'] as const;
@@ -202,4 +202,4 @@ const styles = StyleSheet.create({
   },
 });
 
-export default ReportsScreen;
+export default ReportsScreen; 

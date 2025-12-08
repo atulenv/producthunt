@@ -1,4 +1,4 @@
-// UI Revamp – new Settings screen layout and styles.
+;,// UI Revamp – new Settings screen layout and styles.
 import { Ionicons } from '@expo/vector-icons';
 import React from 'react';
 import { View, Text, StyleSheet, Switch, TouchableOpacity, ScrollView, Platform } from 'react-native';
