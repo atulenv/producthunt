@@ -186,6 +186,7 @@ const RiskZoneMapScreen = () => {
                   </Text>
                 </TouchableOpacity>
               ))}
+              
             </ScrollView>
 
             {/* Category Filter */}

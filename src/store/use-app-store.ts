@@ -187,6 +187,7 @@ type AppActions = {
   setLanguage: (language: LanguageCode) => void;
   addTrip: (trip: Trip) => void;
   addTrustedContact: (contact: TrustedContact) => void;
+  updateTrustedContact: (contact: TrustedContact) => void;
   removeTrustedContact: (id: string) => void;
   addIncidentReport: (report: IncidentReport) => void;
   addSavedPlace: (place: SavedPlace) => void;
@@ -321,6 +322,13 @@ export const useAppStore = create<AppState & AppActions>((set) => ({
   addTrustedContact: (contact) =>
     set((state) => ({
       trustedContacts: [...state.trustedContacts, contact],
+    })),
+
+  updateTrustedContact: (contact) =>
+    set((state) => ({
+      trustedContacts: state.trustedContacts.map((c) =>
+        c.id === contact.id ? contact : c
+      ),
     })),
     
   removeTrustedContact: (id) =>

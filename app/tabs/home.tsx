@@ -60,6 +60,14 @@ const quickActions: QuickAction[] = [
     route: '/screens/Reports',
     color: Theme.colors.warning,
   },
+  {
+    id: 'checkin',
+    label: 'Safety Check-in',
+    description: 'Timed alerts for safety',
+    icon: 'shield-checkmark',
+    route: '/screens/SafetyCheckIn',
+    color: Theme.colors.success,
+  },
 ];
 
 const safetyFeatures = [
@@ -346,7 +354,7 @@ const HomeScreen = () => {
             subtitle="Notified during emergencies"
             icon="people-outline"
             actionLabel="Manage"
-            onActionPress={() => router.push('/tabs/profile')}
+            onActionPress={() => router.push('/screens/ManageContacts')}
           />
           {contactsToShow.slice(0, 3).map((contact) => (
             <View key={contact.id} style={styles.contactRow}>
