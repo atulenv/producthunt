@@ -6,8 +6,7 @@ import { ThemedView } from '@/components/themed-view';
 import { ThemedText } from '@/components/themed-text';
 import AppButton from '@/components/ui/AppButton';
 import { useAppStore, TrustedContact } from '@/src/store/use-app-store';
-import { layout } from '@/constants/layout';
-import { Colors } from '@/constants/theme';
+import { Theme } from '@/constants/theme';
 
 export default function EditContactScreen() {
   const navigation = useNavigation();
@@ -94,24 +93,24 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   form: {
-    padding: layout.padding,
+    padding: Theme.spacing.md,
   },
   label: {
     fontSize: 16,
-    marginBottom: layout.margin / 2,
-    color: Colors.light.subtleText,
+    marginBottom: Theme.spacing.sm,
+    color: Theme.colors.subtleText,
   },
   input: {
-    backgroundColor: Colors.light.surface,
-    padding: layout.padding,
-    borderRadius: layout.radius.md,
+    backgroundColor: Theme.colors.card,
+    padding: Theme.spacing.md,
+    borderRadius: Theme.radius.md,
     fontSize: 16,
-    marginBottom: layout.padding,
+    marginBottom: Theme.spacing.md,
     borderWidth: 1,
-    borderColor: Colors.light.border,
-    color: Colors.light.text,
+    borderColor: Theme.colors.border,
+    color: Theme.colors.text,
   },
   saveButton: {
-    marginTop: layout.margin,
+    marginTop: Theme.spacing.md,
   },
 });

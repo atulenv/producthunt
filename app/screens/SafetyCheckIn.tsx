@@ -8,8 +8,7 @@ import { ThemedView } from '@/components/themed-view';
 import AppButton from '@/components/ui/AppButton';
 import { Card } from '@/components/ui/Card';
 import { useAppStore, TrustedContact } from '@/src/store/use-app-store';
-import { Colors } from '@/constants/theme';
-import { layout } from '@/constants/layout';
+import { Theme } from '@/constants/theme';
 
 const DURATION_OPTIONS = [5, 10, 15, 30, 45, 60]; // in minutes
 
@@ -142,49 +141,54 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   scrollContent: {
-    padding: layout.padding,
+    padding: Theme.spacing.md,
   },
   header: {
     textAlign: 'center',
-    marginBottom: layout.padding,
+    marginBottom: Theme.spacing.md,
   },
   card: {
-    marginBottom: layout.padding,
+    marginBottom: Theme.spacing.md,
   },
   cardHeader: {
-    marginBottom: layout.margin,
+    marginBottom: Theme.spacing.md,
   },
   optionsContainer: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: layout.margin,
+    gap: Theme.spacing.md,
   },
   optionButton: {
-    backgroundColor: Colors.light.surface,
-    borderColor: Colors.light.border,
+    backgroundColor: Theme.colors.card,
+    borderColor: Theme.colors.border,
     borderWidth: 1,
   },
   selectedOption: {
-    backgroundColor: Colors.light.primary,
-    borderColor: Colors.light.primary,
+    backgroundColor: Theme.colors.primary,
+    borderColor: Theme.colors.primary,
   },
   selectedOptionText: {
-      color: Colors.light.background,
+      color: Theme.colors.white,
   },
   startButton: {
-    marginTop: layout.margin,
+    marginTop: Theme.spacing.md,
   },
   timerContainer: {
     alignItems: 'center',
-    padding: layout.padding * 2,
+    padding: Theme.spacing.md * 2,
   },
   timerIntro: {
     fontSize: 16,
-    marginBottom: layout.margin,
+    marginBottom: Theme.spacing.md,
   },
   timer: {
     fontSize: 64,
     fontWeight: 'bold',
-    marginVertical: layout.padding,
+    marginVertical: Theme.spacing.md,
   },
+  noContactsText: {
+    textAlign: 'center',
+    color: Theme.colors.subtleText,
+    marginVertical: Theme.spacing.md,
+  }
 });

@@ -73,19 +73,6 @@ export default function RootLayout() {
           }}
         />
         <Stack.Screen
-          name="screens/Emergency"
-          options={{
-            headerShown: true,
-            headerTitle: 'Emergency hub',
-            headerStyle: { backgroundColor: Theme.colors.background },
-            headerTitleStyle: {
-              fontFamily: Theme.font.family.sansBold,
-              color: Theme.colors.text,
-            },
-            headerShadowVisible: false,
-          }}
-        />
-        <Stack.Screen
           name="screens/Trips"
           options={{
             headerShown: true,

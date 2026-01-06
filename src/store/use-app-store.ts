@@ -1,4 +1,6 @@
 import { create } from 'zustand';
+import { createJSONStorage, persist } from 'zustand/middleware';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 export type Trip = {
   id: string;
@@ -213,205 +215,213 @@ const defaultFamilyContact: FamilyContact = {
   notifyOnSOS: true,
 };
 
-export const useAppStore = create<AppState & AppActions>((set) => ({
-  onboardingCompleted: false,
-  theme: 'light',
-  language: 'en',
-  sosActive: false,
-  sosStartTime: null,
-  locationSharingActive: false,
-  
-  sosSettings: {
-    shakeToSOS: true,
-    shakeSensitivity: 'medium',
-    autoLocationShare: true,
-    locationShareInterval: 5,
-    silentSOSEnabled: true,
-    audioRecordOnSOS: true,
-    videoRecordOnSOS: false,
-    sirenOnSOS: true,
-    autoCallEmergency: true,
-    emergencyNumber: '112',
-    fakeCallEnabled: true,
-    fakeCallerName: 'Mom',
-    fakeCallDelay: 10,
-  },
-  
-  userProfile: {
-    name: '',
-    tagline: 'Tourist in India',
-    photoUri: '',
-    dateOfBirth: '',
-    gender: '',
-    nationality: '',
-    email: '',
-    phone: '',
-    alternatePhone: '',
-    whatsapp: '',
-    passportNumber: '',
-    passportExpiry: '',
-    nationalId: '',
-    visaNumber: '',
-    visaExpiry: '',
-    familyContacts: [{ ...defaultFamilyContact }],
-    currentHotel: '',
-    hotelAddress: '',
-    hotelPhone: '',
-    roomNumber: '',
-    checkInDate: '',
-    checkOutDate: '',
-    arrivalFlight: '',
-    departureFlight: '',
-    travelInsurance: '',
-    insuranceEmergencyNumber: '',
-    embassyName: '',
-    embassyPhone: '',
-    embassyAddress: '',
-    homeBase: '',
-    pronouns: '',
-    travelDocumentExpiry: '',
-    languagesSpoken: '',
-    safeWord: '',
-    embassyContact: '',
-    localStayAddress: '',
-    localHostName: '',
-    employerContact: '',
-    socialHandle: '',
-    emergencyContact: {
-      name: '',
-      relation: '',
-      phone: '',
-      email: '',
-      address: '',
-    },
-    medicalInfo: {
-      bloodType: '',
-      allergies: '',
-      medications: '',
-      insuranceProvider: '',
-      insurancePolicy: '',
-      physicianContact: '',
-      medicalNotes: '',
-      medicalConditions: '',
-      organDonor: false,
-    },
-    travelPreferences: {
-      travelStyle: '',
-      accommodation: '',
-      transport: '',
-      dietary: '',
-      mobilityNeeds: '',
-      communication: '',
-    },
-    verificationNotes: '',
-    profileComplete: false,
-    lastUpdated: '',
-  },
-  
-  trips: [],
-  trustedContacts: [],
-  incidentReports: [],
-  savedPlaces: [],
-  
-  completeOnboarding: () => set({ onboardingCompleted: true }),
-  setTheme: (theme) => set({ theme }),
-  setLanguage: (language) => set({ language }),
-  
-  addTrip: (trip) => set((state) => ({ trips: [...state.trips, trip] })),
-  
-  addTrustedContact: (contact) =>
-    set((state) => ({
-      trustedContacts: [...state.trustedContacts, contact],
-    })),
-
-  updateTrustedContact: (contact) =>
-    set((state) => ({
-      trustedContacts: state.trustedContacts.map((c) =>
-        c.id === contact.id ? contact : c
-      ),
-    })),
-    
-  removeTrustedContact: (id) =>
-    set((state) => ({
-      trustedContacts: state.trustedContacts.filter((c) => c.id !== id),
-    })),
-    
-  addIncidentReport: (report) =>
-    set((state) => ({
-      incidentReports: [...state.incidentReports, report],
-    })),
-    
-  addSavedPlace: (place) =>
-    set((state) => ({ savedPlaces: [...state.savedPlaces, place] })),
-    
-  updateUserProfile: (updates) =>
-    set((state) => {
-      const { emergencyContact, medicalInfo, travelPreferences, familyContacts, ...rest } = updates;
-      return {
-        userProfile: {
-          ...state.userProfile,
-          ...rest,
-          emergencyContact: emergencyContact
-            ? { ...state.userProfile.emergencyContact, ...emergencyContact }
-            : state.userProfile.emergencyContact,
-          medicalInfo: medicalInfo
-            ? { ...state.userProfile.medicalInfo, ...medicalInfo }
-            : state.userProfile.medicalInfo,
-          travelPreferences: travelPreferences
-            ? { ...state.userProfile.travelPreferences, ...travelPreferences }
-            : state.userProfile.travelPreferences,
-          familyContacts: familyContacts ?? state.userProfile.familyContacts,
-          lastUpdated: new Date().toISOString(),
-        },
-      };
-    }),
-    
-  updateSOSSettings: (updates) =>
-    set((state) => ({
-      sosSettings: { ...state.sosSettings, ...updates },
-    })),
-    
-  triggerSOS: () =>
-    set({
-      sosActive: true,
-      sosStartTime: new Date().toISOString(),
-      locationSharingActive: true,
-    }),
-    
-  deactivateSOS: () =>
-    set({
+export const useAppStore = create<AppState & AppActions>()(
+  persist(
+    (set) => ({
+      onboardingCompleted: false,
+      theme: 'light',
+      language: 'en',
       sosActive: false,
       sosStartTime: null,
+      locationSharingActive: false,
+      
+      sosSettings: {
+        shakeToSOS: true,
+        shakeSensitivity: 'medium',
+        autoLocationShare: true,
+        locationShareInterval: 5,
+        silentSOSEnabled: true,
+        audioRecordOnSOS: true,
+        videoRecordOnSOS: false,
+        sirenOnSOS: true,
+        autoCallEmergency: true,
+        emergencyNumber: '112',
+        fakeCallEnabled: true,
+        fakeCallerName: 'Mom',
+        fakeCallDelay: 10,
+      },
+      
+      userProfile: {
+        name: '',
+        tagline: 'Tourist in India',
+        photoUri: '',
+        dateOfBirth: '',
+        gender: '',
+        nationality: '',
+        email: '',
+        phone: '',
+        alternatePhone: '',
+        whatsapp: '',
+        passportNumber: '',
+        passportExpiry: '',
+        nationalId: '',
+        visaNumber: '',
+        visaExpiry: '',
+        familyContacts: [{ ...defaultFamilyContact }],
+        currentHotel: '',
+        hotelAddress: '',
+        hotelPhone: '',
+        roomNumber: '',
+        checkInDate: '',
+        checkOutDate: '',
+        arrivalFlight: '',
+        departureFlight: '',
+        travelInsurance: '',
+        insuranceEmergencyNumber: '',
+        embassyName: '',
+        embassyPhone: '',
+        embassyAddress: '',
+        homeBase: '',
+        pronouns: '',
+        travelDocumentExpiry: '',
+        languagesSpoken: '',
+        safeWord: '',
+        embassyContact: '',
+        localStayAddress: '',
+        localHostName: '',
+        employerContact: '',
+        socialHandle: '',
+        emergencyContact: {
+          name: '',
+          relation: '',
+          phone: '',
+          email: '',
+          address: '',
+        },
+        medicalInfo: {
+          bloodType: '',
+          allergies: '',
+          medications: '',
+          insuranceProvider: '',
+          insurancePolicy: '',
+          physicianContact: '',
+          medicalNotes: '',
+          medicalConditions: '',
+          organDonor: false,
+        },
+        travelPreferences: {
+          travelStyle: '',
+          accommodation: '',
+          transport: '',
+          dietary: '',
+          mobilityNeeds: '',
+          communication: '',
+        },
+        verificationNotes: '',
+        profileComplete: false,
+        lastUpdated: '',
+      },
+      
+      trips: [],
+      trustedContacts: [],
+      incidentReports: [],
+      savedPlaces: [],
+      
+      completeOnboarding: () => set({ onboardingCompleted: true }),
+      setTheme: (theme) => set({ theme }),
+      setLanguage: (language) => set({ language }),
+      
+      addTrip: (trip) => set((state) => ({ trips: [...state.trips, trip] })),
+      
+      addTrustedContact: (contact) =>
+        set((state) => ({
+          trustedContacts: [...state.trustedContacts, contact],
+        })),
+    
+      updateTrustedContact: (contact) =>
+        set((state) => ({
+          trustedContacts: state.trustedContacts.map((c) =>
+            c.id === contact.id ? contact : c
+          ),
+        })),
+        
+      removeTrustedContact: (id) =>
+        set((state) => ({
+          trustedContacts: state.trustedContacts.filter((c) => c.id !== id),
+        })),
+        
+      addIncidentReport: (report) =>
+        set((state) => ({
+          incidentReports: [...state.incidentReports, report],
+        })),
+        
+      addSavedPlace: (place) =>
+        set((state) => ({ savedPlaces: [...state.savedPlaces, place] })),
+        
+      updateUserProfile: (updates) =>
+        set((state) => {
+          const { emergencyContact, medicalInfo, travelPreferences, familyContacts, ...rest } = updates;
+          return {
+            userProfile: {
+              ...state.userProfile,
+              ...rest,
+              emergencyContact: emergencyContact
+                ? { ...state.userProfile.emergencyContact, ...emergencyContact }
+                : state.userProfile.emergencyContact,
+              medicalInfo: medicalInfo
+                ? { ...state.userProfile.medicalInfo, ...medicalInfo }
+                : state.userProfile.medicalInfo,
+              travelPreferences: travelPreferences
+                ? { ...state.userProfile.travelPreferences, ...travelPreferences }
+                : state.userProfile.travelPreferences,
+              familyContacts: familyContacts ?? state.userProfile.familyContacts,
+              lastUpdated: new Date().toISOString(),
+            },
+          };
+        }),
+        
+      updateSOSSettings: (updates) =>
+        set((state) => ({
+          sosSettings: { ...state.sosSettings, ...updates },
+        })),
+        
+      triggerSOS: () =>
+        set({
+          sosActive: true,
+          sosStartTime: new Date().toISOString(),
+          locationSharingActive: true,
+        }),
+        
+      deactivateSOS: () =>
+        set({
+          sosActive: false,
+          sosStartTime: null,
+        }),
+        
+      toggleLocationSharing: () =>
+        set((state) => ({
+          locationSharingActive: !state.locationSharingActive,
+        })),
+        
+      addFamilyContact: (contact) =>
+        set((state) => ({
+          userProfile: {
+            ...state.userProfile,
+            familyContacts: [...state.userProfile.familyContacts, contact],
+          },
+        })),
+        
+      removeFamilyContact: (index) =>
+        set((state) => ({
+          userProfile: {
+            ...state.userProfile,
+            familyContacts: state.userProfile.familyContacts.filter((_, i) => i !== index),
+          },
+        })),
+        
+      updateFamilyContact: (index, contact) =>
+        set((state) => ({
+          userProfile: {
+            ...state.userProfile,
+            familyContacts: state.userProfile.familyContacts.map((c, i) =>
+              i === index ? { ...c, ...contact } : c
+            ),
+          },
+        })),
     }),
-    
-  toggleLocationSharing: () =>
-    set((state) => ({
-      locationSharingActive: !state.locationSharingActive,
-    })),
-    
-  addFamilyContact: (contact) =>
-    set((state) => ({
-      userProfile: {
-        ...state.userProfile,
-        familyContacts: [...state.userProfile.familyContacts, contact],
-      },
-    })),
-    
-  removeFamilyContact: (index) =>
-    set((state) => ({
-      userProfile: {
-        ...state.userProfile,
-        familyContacts: state.userProfile.familyContacts.filter((_, i) => i !== index),
-      },
-    })),
-    
-  updateFamilyContact: (index, contact) =>
-    set((state) => ({
-      userProfile: {
-        ...state.userProfile,
-        familyContacts: state.userProfile.familyContacts.map((c, i) =>
-          i === index ? { ...c, ...contact } : c
-        ),
-      },
-    })),
-}));
+    {
+      name: 'tourist-safety-storage',
+      storage: createJSONStorage(() => AsyncStorage),
+    }
+  )
+);

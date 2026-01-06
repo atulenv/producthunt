@@ -8,8 +8,7 @@ import { ThemedView } from '@/components/themed-view';
 import { ThemedText } from '@/components/themed-text';
 import { useAppStore } from '@/src/store/use-app-store';
 import AppButton from '@/components/ui/AppButton';
-import { layout } from '@/constants/layout';
-import { Colors } from '@/constants/theme';
+import { Theme } from '@/constants/theme';
 
 export default function ManageContactsScreen() {
   const navigation = useNavigation();
@@ -85,21 +84,21 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   listContent: {
-    padding: layout.padding,
+    padding: Theme.spacing.md,
   },
   addButton: {
-    marginBottom: layout.padding,
+    marginBottom: Theme.spacing.md,
   },
   contactRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: Colors.light.card,
-    padding: layout.padding,
-    borderRadius: layout.radius.lg,
-    marginBottom: layout.margin,
+    backgroundColor: Theme.colors.card,
+    padding: Theme.spacing.md,
+    borderRadius: Theme.radius.lg,
+    marginBottom: Theme.spacing.md,
   },
   avatar: {
-    marginRight: layout.margin,
+    marginRight: Theme.spacing.md,
   },
   contactInfo: {
     flex: 1,
@@ -109,7 +108,7 @@ const styles = StyleSheet.create({
     fontSize: 16,
   },
   contactPhone: {
-    color: Colors.light.subtleText,
+    color: Theme.colors.subtleText,
   },
   actions: {
     flexDirection: 'row',
@@ -124,6 +123,6 @@ const styles = StyleSheet.create({
   },
   emptyText: {
     fontSize: 16,
-    color: Colors.light.subtleText,
+    color: Theme.colors.subtleText,
   },
 });
